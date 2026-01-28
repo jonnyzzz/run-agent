@@ -14,6 +14,7 @@ Use these placeholders to avoid hardcoded paths:
 
 ## Core Principles
 - Root agent orchestrates; sub-agents do codebase work in the target repo.
+- This document and the root role prompts are the primary source of truth; project-specific prompts should be minimal overrides that reference these files.
 - If the target codebase is outside <PROJECT_ROOT>, the root agent must not modify it directly; use sub-agents with CWD set to the target repo.
 - Log significant actions to <MESSAGE_BUS> (append-only) and blockers to <ISSUES_FILE>.
 - IntelliJ MCP Steroid review is required for changes; compilation/build must succeed before completion when builds/tests exist.
@@ -45,7 +46,7 @@ When creating a <RUNS_DIR>/run_XXX/prompt.md, copy the relevant role file verbat
 - If the agent thread limit is reached, close completed agents and retry spawns.
 
 ## Agent Execution and Traceability (Required)
-All agent runs must use a unified runner script when available (for example, ./run-agent.sh in this repo). The runner must create a new run folder and enforce consistent file names. If no runner exists, manually create the run folder and required artifacts, and log the deviation to <MESSAGE_BUS>.
+All agent runs must use a unified runner script when available (for example, ./run-agent.sh in this repo). The runner must create a new run folder and enforce consistent file names. If no runner exists, manually create the run folder and required artifacts, and log the deviation to <MESSAGE_BUS>. If you are operating from a centralized template repo, copy the runner/monitor scripts into the project root or set RUNS_DIR/MESSAGE_BUS explicitly.
 
 Required steps for every agent run:
 1. Prepare a prompt file (any path). The orchestrator prepares full prompt text for each sub-agent and uses absolute paths for all .md references.
@@ -73,7 +74,7 @@ All inputs/outputs must be persisted under the same <RUNS_DIR>/run_XXX/ folder (
 ### Monitoring (Console UI)
 Use the monitor script (if present) to see live output with [run_xxx] prefixes and a compact header showing running/finished/unknown counts.
 - Run: uv run python monitor-agents.py
-- The monitor reads <RUNS_DIR> and streams both agent-stdout.txt and agent-stderr.txt.
+- The monitor reads <RUNS_DIR> (via RUNS_DIR env or --runs-dir) and streams both agent-stdout.txt and agent-stderr.txt.
 If the monitor has configurable defaults (poll interval, summary interval/lines), record them in project docs to keep monitoring reproducible.
 
 ### Helper Scripts (if present)
@@ -90,7 +91,7 @@ If the monitor has configurable defaults (poll interval, summary interval/lines)
 Each bullet below is a distinct agent stage. The root agent selects the agent type (Codex/Claude/Gemini) at random unless statistics strongly indicate a better choice. Any failure must be logged to <MESSAGE_BUS> (and <ISSUES_FILE> if blocking), and the flow restarts from the beginning (or from a root-selected stage if appropriate). Parallel execution is allowed where it does not violate dependencies.
 
 1. Stage 0: Cleanup
-   Look at related project files like MESSAGE-BUS.md, AGENTS.md, Instructions.md, FACTS.md, ISSUES.md. Summarize or append new entries; do not edit MESSAGE-BUS history.
+   Look at related project files like MESSAGE-BUS.md, AGENTS.md, Instructions.md, FACTS.md, ISSUES.md. Summarize or append new entries; do not edit MESSAGE-BUS history. Ensure the project root can access the required orchestration files (THE_PROMPT_v5.md, role prompts, run-agent.sh, monitoring scripts). If the project is separate, copy them into the project root; if the project shares a centralized orchestration repo, reference the root files directly. Adapt paths and review the final documents.
 
 2. Stage 1: Read local docs
    Read AGENTS.md and all relevant .md files using absolute paths.
@@ -150,7 +151,7 @@ Each bullet below is a distinct agent stage. The root agent selects the agent ty
 - <RUNS_DIR>/run_XXX/ contains prompt/log artifacts (prompt.md, agent-stdout.txt, agent-stderr.txt, cwd.txt; optional run.log).
 - MESSAGE-BUS.md is the main trace log; ISSUES.md is the blocker log.
 - FACTS.md (if used) records verified facts and decisions.
-- THE_PLAN.md is the execution plan.
+- THE_PLAN.md (or THE_PLAN_v5.md) is the execution plan.
 - THE_PROMPT_v5.md is the primary entry point for new agents.
 
 ## References (Start Here)
@@ -158,7 +159,7 @@ New agents should begin with:
 1. THE_PROMPT_v5.md (this file)
 2. AGENTS.md
 3. Instructions.md
-4. THE_PLAN.md
+4. THE_PLAN.md (or THE_PLAN_v5.md)
 5. A project development guide if present (for example, DEVELOPMENT-GUIDE.md)
 
 ## Tools and Access
@@ -171,7 +172,7 @@ New agents should begin with:
 If this template conflicts with the Required Development Flow, the Required Development Flow wins.
 
 ### Phase 0: Bootstrap
-1. Read AGENTS.md, Instructions.md, and the current plan (THE_PLAN.md).
+1. Read AGENTS.md, Instructions.md, and the current plan (THE_PLAN.md or THE_PLAN_v5.md).
 2. Create a new <RUNS_DIR>/run_XXX/ folder (via run-agent) and keep any extra orchestration notes there if needed.
 3. Log initial DECISIONs in MESSAGE-BUS.md.
 
