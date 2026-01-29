@@ -36,15 +36,56 @@ artifacts: <optional list>
 
 | Type | Purpose |
 |------|---------|
-| `FACT` | Objective finding (code pattern, test result) |
-| `DECISION` | Strategic choice made |
+| `FACT` | Objective finding |
+| `DECISION` | Strategic choice |
 | `QUESTION` | Needs clarification |
 | `ANSWER` | Response to `QUESTION` (requires `relatesTo`) |
 | `PROGRESS` | Status update |
-| `ERROR` | Failure report (critical issues requiring escalation) |
+| `ERROR` | Failure report |
 | `COMPLETE` | Task finished |
 | `TASK` | New task or assignment |
 | `REVIEW` | Structured review output |
+
+### REVIEW Template
+
+```markdown
+Scope: <files/modules>
+Severity: <blocker/major/minor/nit>
+Findings: <bulleted list with file refs>
+Tests: <missing or recommended>
+Recommendation: <action>
+```
+
+### ERROR Template
+
+```markdown
+## Error Report
+
+**Task:** <task description>
+**Attempts:**
+1. Claude: <error summary>
+2. Codex: <error summary>
+3. Gemini: <error summary>
+
+**Error Details:**
+```
+<last error output>
+```
+
+**Impact:** <what is blocked>
+**Suggested Action:** <recommendation>
+```
+
+---
+
+## Traceability Rules
+
+1. Log all prompts and raw outputs in `runs/run_XXX/run.log`.
+2. Save agent output in `runs/run_XXX/agent-logs/<agent>.txt`.
+3. Save model inputs in `runs/run_XXX/prompts/`.
+4. Include `taskId` in every message and plan item.
+5. Include `runId` in commit messages for auditability.
+6. Save review packets in `runs/run_XXX/artifacts/review-packet.md`.
 
 ---
 
