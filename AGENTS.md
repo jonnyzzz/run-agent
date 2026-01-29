@@ -101,7 +101,7 @@ All agents must:
 3. Log errors to ISSUES.md
 4. Report completion via MESSAGE-BUS.md
 
-See THE PROMPT_v2.md Section 5 for message format specification.
+See message-bus-mcp/AGENT-GUIDE.md for message format specification (or docs/v3/COMMUNICATION-TRACEABILITY.md for legacy file-based protocol).
 
 ---
 
