@@ -6,6 +6,16 @@
 
 ---
 
+## AI Agent Rules
+
+1. Write significant findings to `MESSAGE-BUS.md`.
+2. Monitor `MESSAGE-BUS.md` for questions addressed to your agent.
+3. Report blockers as `ERROR` messages with concrete failure details.
+4. Report completion as `COMPLETE` with changed files and artifacts.
+5. Never rewrite earlier entries. Add new entries only.
+
+---
+
 ## Message Format Reference
 
 ```markdown
@@ -17,8 +27,8 @@ timestamp: YYYY-MM-DDTHH:MM:SSZ
 runId: <run_XXX>
 taskId: <TASK-...>
 relatesTo: <parent-messageId>
-files: <optional list>
-artifacts: <optional list>
+files: <optional comma-separated list>
+artifacts: <optional comma-separated list>
 ---
 
 <message content>
@@ -28,7 +38,7 @@ artifacts: <optional list>
 
 **Field Details:**
 - `messageId`: `MSG-` + date + time + agent + short random suffix (example: `MSG-20260126-101500-claude-5f2`)
-- `agent`: Format `<type>-<role>-<N>` (example: `claude-research-1`, `orchestrator`)
+- `agent`: Format `<type>-<role>-<N>` (example: `claude-research-1`, `codex-review-2`, `orchestrator`)
 - `relatesTo`: Required for `ANSWER` messages, optional otherwise
 - `runId` and `taskId`: Required for traceability
 
@@ -86,6 +96,31 @@ Recommendation: <action>
 4. Include `taskId` in every message and plan item.
 5. Include `runId` in commit messages for auditability.
 6. Save review packets in `runs/run_XXX/artifacts/review-packet.md`.
+
+---
+
+## Concurrency and Locking
+
+If multiple agents append simultaneously, use a lock.
+
+```bash
+LOCK_DIR="/tmp/message-bus.lock"
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do sleep 0.1; done
+cat message_block.md >> MESSAGE-BUS.md
+rmdir "$LOCK_DIR"
+```
+
+If locking is not available, write each complete message block using one append operation.
+
+---
+
+## Monitoring Protocol
+
+1. Check file growth regularly (for example every 30 seconds).
+2. Read only new bytes from the last known position.
+3. Process new messages and update your local state.
+4. Reply to relevant `QUESTION` messages.
+5. Continue work while polling; do not block on bus changes.
 
 ---
 
