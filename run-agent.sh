@@ -53,10 +53,10 @@ case "$AGENT" in
     ) &
     ;;
   gemini)
-    CMDLINE="gemini --approval-mode auto_edit < \"$RUN_DIR/prompt.md\""
+    CMDLINE="gemini --screen-reader true --yolo --approval-mode yolo <\"$RUN_DIR/prompt.md\""
     (
       cd "$CWD"
-      gemini --approval-mode auto_edit <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
+      gemini --screen-reader true --yolo --approval-mode yolo <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
     ) &
     ;;
   *)
