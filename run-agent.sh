@@ -1,6 +1,13 @@
 #!/bin/bash
 # Unified agent runner. Creates a new run_XXX folder, runs the agent, and blocks until completion.
 # Usage: ./run-agent.sh [agent] [cwd] [prompt_file]
+#
+# Source: https://run-agent.jonnyzzz.com/run-agent.sh
+# Docs:   https://run-agent.jonnyzzz.com/
+#
+# Copyright 2026 Eugene Petrenko
+# Licensed under the Apache License, Version 2.0
+# https://run-agent.jonnyzzz.com/LICENSE
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"

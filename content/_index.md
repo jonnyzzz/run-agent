@@ -5,47 +5,110 @@ description: "Multi-Agent AI Orchestration for Software Development"
 
 **Orchestrate a swarm of AI Agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
 
-<div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1.5rem 0;">
-<div style="flex: 1; min-width: 300px; padding: 1.5rem;">
+<div class="product-cards">
+<div class="product-card">
+<div class="product-card-body">
 
 ### `run-agent.sh`
 **The Runner**
 
 A unified shell script that launches AI Agents (Claude, Codex, Gemini) with full isolation and traceability. Each run gets its own folder with captured prompts, stdout/stderr, PID tracking, and exit codes.
 
-Works best with [THE_PROMPT_v5.md](#the-brain) to orchestrate multi-agent workflows.
+</div>
+<div class="product-card-footer">
 
 [View on GitHub](https://github.com/jonnyzzz/run-agent/blob/main/run-agent.sh)
 
 </div>
-<div style="flex: 1; min-width: 300px; padding: 1.5rem;">
+</div>
+<div class="product-card">
+<div class="product-card-body">
+
+### `MESSAGE-BUS.md`
+**The Nervous System**
+
+A file-based, append-only trace log that connects every AI Agent in the swarm. No databases, no infrastructure -- just a shared markdown file.
+
+</div>
+<div class="product-card-footer">
+
+[Learn more](#message-bus)
+
+</div>
+</div>
+<div class="product-card">
+<div class="product-card-body">
 
 ### `THE_PROMPT_v5.md`
 **The Brain**
 
 A project-independent orchestration workflow that defines roles, stages, quality gates, and communication protocols for AI Agents. It turns raw LLMs into a coordinated development team.
 
-**13 stages** from research to deployment. **7 AI Agent roles** from orchestrator to monitor. **16 parallel AI Agents** max.
+**13 stages** from research to deployment. **7 AI Agent roles** from orchestrator to monitor.
 
-Works best with [run-agent.sh](#the-runner) to execute the orchestrated workflow.
+</div>
+<div class="product-card-footer">
 
 [View on GitHub](https://github.com/jonnyzzz/run-agent/blob/main/THE_PROMPT_v5.md)
 
 </div>
 </div>
+</div>
+
+---
+
+## Agentic Swarm
+
+Start **dozens of AI Agents in parallel** -- research, implementation, review, testing, and debugging AI Agents all working on the same codebase simultaneously. The orchestrator coordinates the swarm, splits work by subsystem, and enforces review quorums before commits land.
+
+Each AI Agent has a **fixed role**: Orchestrator, Research, Implementation, Review, Test, Debug, or Monitor. AI Agents don't improvise -- they follow the staged workflow, log actions to the message bus, and report blockers. The result is deterministic, reproducible multi-agent development.
+
+### Full Traceability
+
+Every AI Agent invocation creates an isolated run folder under `runs/`. Each folder is a self-contained record: the exact prompt, full stdout/stderr, execution metadata, and a copy of the runner script. No lost context. No "what did the AI Agent do?" mysteries.
+
+## AI Agent Roles
+
+`THE_PROMPT_v5.md` defines 7 specialized roles. The entry point is always the **Orchestrator**, which spawns sub-agents as needed:
+
+**Orchestrator** coordinates the full workflow and spawns sub-agents. **Research** explores the codebase without making changes. **Implementation** writes code and tests. **Review** performs code review and quality checks. **Test** runs tests and verifies changes. **Debug** investigates failures and proposes fixes. **Monitor** watches for stalled agents and restarts them.
+
+Each role has a dedicated prompt file (`THE_PROMPT_v5_orchestrator.md`, `THE_PROMPT_v5_research.md`, etc.) that the orchestrator copies into the run folder when spawning a sub-agent.
+
+---
+
+## Message Bus
+
+The message bus (`MESSAGE-BUS.md`) is how the agentic swarm communicates. It's a simple, file-based, **append-only trace log** -- no databases, no infrastructure, no setup. Every AI Agent in the swarm reads and writes to it.
+
+This is the nervous system of the swarm. AI Agents use it to:
+
+- **Coordinate work** -- claim tasks, report completion, hand off to the next stage
+- **Share discoveries** -- post research findings, flag blockers, surface decisions
+- **Synchronize state** -- the orchestrator reads the bus to decide what to do next
+
+Every entry is tagged with a structured type:
+
+- **FACT** -- Concrete results (test counts, commit hashes, file paths)
+- **PROGRESS** -- In-flight status updates
+- **DECISION** -- Policy choices with rationale
+- **REVIEW** -- Structured code review feedback
+- **ERROR** -- Failures that block progress
+
+The bus is the single source of truth. When something goes wrong, you read the bus to understand exactly what each AI Agent did and why.
 
 ---
 
 ## Quick Start
 
-Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work **outside your project sources**. You don't need to clone anything into your codebase -- just point an AI Agent at the URLs and your target repository.
+Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work **outside your project sources**. Just point an AI Agent at the URLs and your target repository.
 
 Give this prompt to your AI Agent (Claude, Codex, or Gemini):
 
 ```
 Download and follow the orchestration workflow from:
 - https://run-agent.jonnyzzz.com/run-agent.sh
-- https://raw.githubusercontent.com/jonnyzzz/run-agent/main/THE_PROMPT_v5.md
+- https://run-agent.jonnyzzz.com/THE_PROMPT_v5.md
 
 Apply it to the project at: /path/to/your/repo
 
@@ -56,13 +119,33 @@ The orchestration files, runs/, MESSAGE-BUS.md, and ISSUES.md
 all live in the task directory -- separate from your project sources.
 ```
 
-Optionally, clone the repository for local access to the runner and monitoring scripts:
+## How Agents Are Launched
+
+`run-agent.sh` provides a consistent interface for launching Claude, Codex, or Gemini:
 
 ```bash
-git clone https://github.com/jonnyzzz/run-agent.git
+./run-agent.sh claude /path/to/target/repo prompt.md
+./run-agent.sh codex /path/to/target/repo prompt.md
+./run-agent.sh gemini /path/to/target/repo prompt.md
 ```
 
-### Working Directory Layout
+Each AI Agent CLI is invoked with **full permissions bypassed** to allow unrestricted code generation and execution:
+
+| AI Agent | CLI | Flags |
+|----------|-----|-------|
+| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
+| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
+| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
+
+<div class="warning-banner">
+
+**Warning:** AI Agents run with full permissions -- they can read, write, and execute anything on the system. This is by design for autonomous multi-agent workflows, but review the prompts and understand the risks before running agents on sensitive systems.
+
+</div>
+
+---
+
+## Working Directory Layout
 
 The orchestration runs in its own directory, separate from your target codebase:
 
@@ -93,72 +176,6 @@ Each task gets its own `PROJECT_ROOT` with independent runs, message bus, and is
 
 ---
 
-## Core Features
-
-### Agentic Swarm
-
-Run up to **16 AI Agents in parallel** -- research, implementation, review, testing, and debugging AI Agents all working on the same codebase simultaneously. The orchestrator coordinates the swarm, splits work by subsystem, and enforces review quorums before commits land.
-
-Each AI Agent has a **fixed role**: Orchestrator, Research, Implementation, Review, Test, Debug, or Monitor. AI Agents don't improvise -- they follow the staged workflow, log actions to the message bus, and report blockers. The result is deterministic, reproducible multi-agent development.
-
-### Message Bus
-
-The message bus (`MESSAGE-BUS.md`) is how the agentic swarm communicates. It's a simple, file-based, **append-only trace log** -- no databases, no infrastructure, no setup. Every AI Agent in the swarm reads and writes to it.
-
-This is the nervous system of the swarm. AI Agents use it to:
-
-- **Coordinate work** -- claim tasks, report completion, hand off to the next stage
-- **Share discoveries** -- post research findings, flag blockers, surface decisions
-- **Synchronize state** -- the orchestrator reads the bus to decide what to do next
-
-Every entry is tagged with a structured type:
-
-- **FACT** -- Concrete results (test counts, commit hashes, file paths)
-- **PROGRESS** -- In-flight status updates
-- **DECISION** -- Policy choices with rationale
-- **REVIEW** -- Structured code review feedback
-- **ERROR** -- Failures that block progress
-
-The bus is the single source of truth. When something goes wrong, you read the bus to understand exactly what each AI Agent did and why.
-
-### Full Traceability
-
-Every AI Agent invocation creates an isolated run folder under `runs/`. Each folder is a self-contained record: the exact prompt, full stdout/stderr, execution metadata, and a copy of the runner script. No lost context. No "what did the AI Agent do?" mysteries.
-
----
-
-## How Agents Are Launched
-
-`run-agent.sh` provides a consistent interface for launching Claude, Codex, or Gemini:
-
-```bash
-./run-agent.sh claude /path/to/target/repo prompt.md
-./run-agent.sh codex /path/to/target/repo prompt.md
-./run-agent.sh gemini /path/to/target/repo prompt.md
-```
-
-Each AI Agent CLI is invoked with **full permissions bypassed** to allow unrestricted code generation and execution:
-
-| AI Agent | CLI | Flags |
-|----------|-----|-------|
-| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
-| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
-| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
-
-> **Warning:** AI Agents run with full permissions -- they can read, write, and execute anything on the system. This is by design for autonomous multi-agent workflows, but review the prompts and understand the risks before running agents on sensitive systems.
-
----
-
-## AI Agent Roles
-
-`THE_PROMPT_v5.md` defines 7 specialized roles. The entry point is always the **Orchestrator**, which spawns sub-agents as needed:
-
-**Orchestrator** coordinates the full workflow and spawns sub-agents. **Research** explores the codebase without making changes. **Implementation** writes code and tests. **Review** performs code review and quality checks. **Test** runs tests and verifies changes. **Debug** investigates failures and proposes fixes. **Monitor** watches for stalled agents and restarts them.
-
-Each role has a dedicated prompt file (`THE_PROMPT_v5_orchestrator.md`, `THE_PROMPT_v5_research.md`, etc.) that the orchestrator copies into the run folder when spawning a sub-agent.
-
----
-
 ## MCP Steroid Integration
 
 Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) -- an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI Agents.
@@ -169,4 +186,4 @@ Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroi
 
 ## License
 
-[Apache License 2.0](https://github.com/jonnyzzz/run-agent/blob/main/LICENSE)
+All files published at `run-agent.jonnyzzz.com` are licensed under the [Apache License 2.0](/LICENSE). Copyright 2026 Eugene Petrenko.

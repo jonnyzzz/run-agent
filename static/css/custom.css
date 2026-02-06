@@ -57,50 +57,61 @@ article h3 {
 }
 
 /* ===== Product cards ===== */
-article > div[style*="display: flex"] {
-  gap: 1.5rem !important;
-  margin: 1.5rem 0 !important;
+.product-cards {
+  display: flex;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
 }
 
-article > div[style*="display: flex"] > div {
-  border: none !important;
-  border-radius: 12px !important;
-  padding: 2rem !important;
+.product-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
   background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  position: relative;
   overflow: hidden;
 }
 
-article > div[style*="display: flex"] > div:hover {
+.product-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 /* Cyan accent for The Runner */
-article > div[style*="display: flex"] > div:first-child {
-  border-top: 4px solid #00bcd4 !important;
+.product-card:nth-child(1) {
+  border-top: 4px solid #00bcd4;
+}
+
+/* Orange accent for The Nervous System */
+.product-card:nth-child(2) {
+  border-top: 4px solid #ff9800;
 }
 
 /* Navy accent for The Brain */
-article > div[style*="display: flex"] > div:last-child {
-  border-top: 4px solid #1a237e !important;
+.product-card:nth-child(3) {
+  border-top: 4px solid #1a237e;
 }
 
-article > div[style*="display: flex"] > div h3 {
+.product-card-body {
+  flex: 1;
+  padding: 2rem 2rem 0.5rem;
+}
+
+.product-card-body h3 {
   margin-top: 0;
   color: #0d1b2a;
 }
 
-article > div[style*="display: flex"] > div h3 code {
+.product-card-body h3 code {
   font-size: 1.1rem;
   background: none;
   padding: 0;
   color: #0d1b2a;
 }
 
-article > div[style*="display: flex"] > div p strong:first-child {
+.product-card-body p strong:first-child {
   display: inline-block;
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -109,9 +120,12 @@ article > div[style*="display: flex"] > div p strong:first-child {
   margin-bottom: 0.25rem;
 }
 
-article > div[style*="display: flex"] > div a[href*="github"] {
+.product-card-footer {
+  padding: 0.75rem 2rem 1.5rem;
+}
+
+.product-card-footer a {
   display: inline-block;
-  margin-top: 0.75rem;
   padding: 0.5rem 1.25rem;
   background: #0d1b2a;
   color: #fff !important;
@@ -123,7 +137,7 @@ article > div[style*="display: flex"] > div a[href*="github"] {
   border-bottom: none !important;
 }
 
-article > div[style*="display: flex"] > div a[href*="github"]:hover {
+.product-card-footer a:hover {
   background: #1a2d4a;
   color: #fff !important;
   border-bottom: none !important;
@@ -246,17 +260,51 @@ article a:hover {
   border-bottom-color: #023e8a;
 }
 
-/* ===== Blockquotes / Warnings ===== */
+/* ===== Blockquotes ===== */
 blockquote {
-  border-left: 4px solid #ff9800;
-  background: #fff8e1;
+  border-left: 4px solid #90caf9;
+  background: #f0f4f8;
   padding: 1rem 1.5rem;
   margin: 1.5rem 0;
   border-radius: 0 8px 8px 0;
-  color: #5d4037;
+  color: #333;
 }
 
-blockquote strong {
+/* ===== Warning banner ===== */
+.warning-banner {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 1px solid #ffb74d;
+  border-left: 5px solid #f57c00;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  color: #4e342e;
+  position: relative;
+}
+
+.warning-banner::before {
+  content: "\26A0";
+  font-size: 1.4rem;
+  position: absolute;
+  top: 1.1rem;
+  left: -0.75rem;
+  background: #f57c00;
+  color: #fff;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.warning-banner p {
+  margin: 0;
+}
+
+.warning-banner strong {
   color: #e65100;
 }
 
@@ -288,14 +336,11 @@ footer a:hover {
 }
 
 /* ===== Responsive ===== */
-@media (min-width: 768px) {
-  article > div[style*="display: flex"] > div {
-    display: flex;
+@media (max-width: 767px) {
+  .product-cards {
     flex-direction: column;
   }
-}
 
-@media (max-width: 767px) {
   article {
     padding: 0 1rem;
   }
