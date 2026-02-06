@@ -4,3 +4,59 @@
 code, pre, .highlight code, .highlight pre {
   font-family: 'JetBrains Mono', monospace;
 }
+
+/* Inline code styling */
+p code, li code, td code, h3 code {
+  background: #f0f0f0;
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Smaller logo in nav */
+nav img {
+  max-height: 48px;
+  width: auto;
+}
+
+/* Product cards side-by-side */
+@media (min-width: 768px) {
+  article > div[style*="display: flex"] {
+    align-items: stretch;
+  }
+  article > div[style*="display: flex"] > div {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+tr:nth-child(even) {
+  background: #fafafa;
+}
+
+/* Code blocks */
+pre {
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}

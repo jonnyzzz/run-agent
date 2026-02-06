@@ -1,10 +1,11 @@
 ---
 title: "run-agent.sh"
 description: "Multi-Agent AI Orchestration for Software Development"
-featured_image: "/images/hero.png"
 ---
 
 **Two tools. One framework. Ship code with parallel AI agents.**
+
+<img src="/images/hero.png" alt="AI agents orchestrating code" style="width: 100%; border-radius: 8px; margin: 1rem 0;">
 
 ---
 
