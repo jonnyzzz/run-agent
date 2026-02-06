@@ -1,0 +1,21 @@
+baseURL = 'https://run-agent.jonnyzzz.com/'
+languageCode = 'en-us'
+title = 'run-agent'
+
+[module]
+  [[module.imports]]
+    path = "github.com/theNewDynamic/gohugo-theme-ananke"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[params]
+  description = 'A multi-agent orchestration framework for AI-powered software development'
+  author = 'Eugene Petrenko'
+  github_repo = 'https://github.com/jonnyzzz/run-agent'
+  site_logo = ''
+  featured_image = ''
+  background_color_class = 'bg-dark-blue'
+  recent_posts_number = 0
