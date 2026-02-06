@@ -3,9 +3,6 @@ languageCode = 'en-us'
 title = 'run-agent.sh'
 copyright = '<a href="https://jonnyzzz.com">Eugene Petrenko</a>'
 
-[module]
-  [[module.imports]]
-    path = "github.com/theNewDynamic/gohugo-theme-ananke/v2"
 
 [markup]
   [markup.goldmark]

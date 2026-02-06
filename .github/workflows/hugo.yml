@@ -33,13 +33,6 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
-      - name: Install Hugo theme
-        env:
-          HUGO_CACHEDIR: /tmp/hugo_cache
-        run: |
-          hugo mod tidy
-          hugo mod get -u
-
       - name: Build with Hugo
         env:
           HUGO_CACHEDIR: /tmp/hugo_cache

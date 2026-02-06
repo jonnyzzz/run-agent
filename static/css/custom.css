@@ -26,17 +26,15 @@ nav img {
 
 /* ===== Article content styling ===== */
 article {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
 /* Hero tagline */
 article > p:first-of-type {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   text-align: center;
   color: #333;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Section headings */
@@ -59,13 +57,6 @@ article h3 {
 }
 
 /* ===== Product cards ===== */
-.product-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  margin: 2rem 0;
-}
-
 article > div[style*="display: flex"] {
   gap: 1.5rem !important;
   margin: 1.5rem 0 !important;
@@ -123,24 +114,19 @@ article > div[style*="display: flex"] > div a[href*="github"] {
   margin-top: 0.75rem;
   padding: 0.5rem 1.25rem;
   background: #0d1b2a;
-  color: #fff;
+  color: #fff !important;
   text-decoration: none;
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
   transition: background 0.2s ease;
+  border-bottom: none !important;
 }
 
 article > div[style*="display: flex"] > div a[href*="github"]:hover {
   background: #1a2d4a;
-}
-
-/* ===== Feature sections ===== */
-article > h3:nth-of-type(1),
-article > h3:nth-of-type(2),
-article > h3:nth-of-type(3) {
-  position: relative;
-  padding-left: 0;
+  color: #fff !important;
+  border-bottom: none !important;
 }
 
 /* ===== Inline code styling ===== */
@@ -149,7 +135,7 @@ p code, li code, td code, h3 code {
   padding: 0.15em 0.45em;
   border-radius: 4px;
   font-size: 0.85em;
-  color: #1a237e;
+  color: #0d1b2a;
 }
 
 /* ===== Code blocks ===== */
@@ -249,33 +235,56 @@ article ol {
 
 /* ===== Links ===== */
 article a {
-  color: #1a237e;
+  color: #0077b6;
   text-decoration: none;
-  border-bottom: 1px solid #00bcd4;
+  border-bottom: 1px solid rgba(0, 119, 182, 0.3);
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 article a:hover {
-  color: #00bcd4;
-  border-bottom-color: #1a237e;
+  color: #023e8a;
+  border-bottom-color: #023e8a;
 }
 
-/* ===== Blockquotes (for emphasis) ===== */
+/* ===== Blockquotes / Warnings ===== */
 blockquote {
-  border-left: 4px solid #00bcd4;
-  background: #f0f7fa;
+  border-left: 4px solid #ff9800;
+  background: #fff8e1;
   padding: 1rem 1.5rem;
   margin: 1.5rem 0;
   border-radius: 0 8px 8px 0;
+  color: #5d4037;
+}
+
+blockquote strong {
+  color: #e65100;
 }
 
 /* ===== Footer ===== */
 footer {
   background: #0d1b2a !important;
+  padding: 2rem 0 !important;
+}
+
+footer .social-links a {
+  color: #90caf9 !important;
+  text-decoration: none;
+  margin: 0 0.75rem;
+  transition: color 0.2s ease;
+  border-bottom: none;
+}
+
+footer .social-links a:hover {
+  color: #fff !important;
 }
 
 footer a {
-  color: #00bcd4 !important;
+  color: #90caf9 !important;
+  border-bottom: none !important;
+}
+
+footer a:hover {
+  color: #fff !important;
 }
 
 /* ===== Responsive ===== */
