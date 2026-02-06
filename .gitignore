@@ -6,3 +6,10 @@ ISSUES.md
 .tmp-*
 __pycache__/
 .DS_Store
+public/
+resources/
+.hugo_build.lock
+nanobanana-output/
+prompt-generate-*.md
+*.png
+!static/**/*.png

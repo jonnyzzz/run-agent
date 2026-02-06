@@ -1,6 +1,6 @@
 baseURL = 'https://run-agent.jonnyzzz.com/'
 languageCode = 'en-us'
-title = 'run-agent'
+title = 'run-agent.sh'
 
 [module]
   [[module.imports]]
@@ -12,10 +12,10 @@ title = 'run-agent'
       unsafe = true
 
 [params]
-  description = 'A multi-agent orchestration framework for AI-powered software development'
+  description = 'Multi-Agent AI Orchestration for Software Development'
   author = 'Eugene Petrenko'
   github_repo = 'https://github.com/jonnyzzz/run-agent'
-  site_logo = ''
-  featured_image = ''
+  site_logo = '/images/logo.png'
+  featured_image = '/images/hero.png'
   background_color_class = 'bg-dark-blue'
   recent_posts_number = 0

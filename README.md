@@ -1,32 +1,55 @@
-# run-agent
+# run-agent.sh
 
-**A multi-agent orchestration framework for AI-powered software development.**
-
-Run parallel AI agents (Claude, Codex, Gemini) with full traceability, structured workflows, and quality gates.
+**Two tools. One framework. Ship code with parallel AI agents.**
 
 ---
 
-## What is this?
+## `run-agent.sh` -- The Runner
 
-`run-agent` is a lightweight, shell-based framework for orchestrating multiple AI coding agents working on the same codebase. It provides:
+A unified shell script that launches AI agents (Claude, Codex, Gemini) with full isolation and traceability. Each run gets its own folder with captured prompts, stdout/stderr, PID tracking, and exit codes.
 
-- **Unified agent runner** (`run-agent.sh`) that creates isolated run folders with consistent artifacts
-- **13-stage development workflow** from research through implementation, review, testing, and deployment
-- **Role-specific prompts** for orchestrator, research, implementation, review, test, debug, and monitoring agents
-- **Live monitoring** with `monitor-agents.py` for real-time agent status and log streaming
-- **Full traceability** via append-only message bus and per-run artifact capture
+```bash
+./run-agent.sh claude /path/to/repo prompt.md
+./run-agent.sh codex /path/to/repo prompt.md
+./run-agent.sh gemini /path/to/repo prompt.md
+```
+
+Works best with **THE_PROMPT_v5.md** to orchestrate multi-agent workflows.
+
+## `THE_PROMPT_v5.md` -- The Brain
+
+A project-independent orchestration workflow that defines roles, stages, quality gates, and communication protocols for AI agents. It turns raw LLMs into a coordinated development team.
+
+**13 stages** from research to deployment. **7 agent roles** from orchestrator to monitor. **16 parallel agents** max.
+
+Works best with **run-agent.sh** to execute the orchestrated workflow.
+
+---
+
+## How They Work Together
+
+```
+THE_PROMPT_v5.md                    run-agent.sh
+(defines the workflow)              (executes agents)
+         │                                │
+         ├── Stage 0: Cleanup             ├── ./run-agent.sh claude ...
+         ├── Stage 2: Research    ──────► ├── ./run-agent.sh codex ...
+         ├── Stage 5: Implement   ──────► ├── ./run-agent.sh gemini ...
+         ├── Stage 6: Quality Gate        │
+         ├── Stage 9: Review      ──────► ├── ./run-agent.sh claude ...
+         └── Stage 12: Monitor            └── (all outputs in runs/)
+```
+
+`THE_PROMPT_v5.md` tells agents **what to do** and **in what order**. `run-agent.sh` handles **how to run them** with full artifact capture. Together, they turn your terminal into a multi-agent development shop.
 
 ## Quick Start
 
 ```bash
-# Run a Claude agent with a prompt
-./run-agent.sh claude /path/to/your/repo prompt.md
+git clone https://github.com/jonnyzzz/run-agent.git
+cd run-agent
 
-# Run a Codex agent
-./run-agent.sh codex /path/to/your/repo prompt.md
-
-# Run a Gemini agent
-./run-agent.sh gemini /path/to/your/repo prompt.md
+# Run a Claude agent
+./run-agent.sh claude /path/to/your/repo your-prompt.md
 
 # Monitor all running agents
 uv run python monitor-agents.py
@@ -38,22 +61,7 @@ Each agent run creates a folder under `runs/` with:
 - `cwd.txt` - execution context and exit code
 - `pid.txt` - PID tracking (removed on completion)
 
-## Architecture
-
-```
-run-agent.sh                  # Unified agent runner
-THE_PROMPT_v5.md              # Master orchestration guide
-THE_PROMPT_v5_*.md            # Role-specific prompts (7 roles)
-monitor-agents.py             # Live console monitor
-monitor-agents.sh             # Background PID monitor (10min)
-watch-agents.sh               # Background PID monitor (60s)
-status-loop.sh                # Message bus status appender (60s)
-status-loop-5m.sh             # Message bus status appender (5min)
-run-agent-tests.sh            # Integration tests
-test-claude-run.sh            # Claude sanity check
-```
-
-### Agent Roles
+## Agent Roles (defined in THE_PROMPT_v5.md)
 
 | Role | Prompt File | Purpose |
 |------|------------|---------|
@@ -65,9 +73,15 @@ test-claude-run.sh            # Claude sanity check
 | **Debug** | `THE_PROMPT_v5_debug.md` | Investigate failures, propose fixes |
 | **Monitor** | `THE_PROMPT_v5_monitor.md` | Periodic status checks and restarts |
 
-### Development Flow
+## Supported Agents (launched by run-agent.sh)
 
-The framework enforces a 13-stage workflow:
+| Agent | CLI | Flags |
+|-------|-----|-------|
+| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
+| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
+| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
+
+## The 13-Stage Development Flow
 
 0. **Cleanup** - Read project docs, prepare orchestration files
 1. **Read local docs** - Understand project conventions
@@ -85,58 +99,23 @@ The framework enforces a 13-stage workflow:
 
 ## MCP Steroid Integration
 
-This framework is designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) - an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI agents.
-
-MCP Steroid is the preferred tool for:
-- Code inspections and Find Usages
-- Running tests and builds
-- Quality gate verification (no new warnings/errors)
-- File navigation and search
-
-## Supported Agents
-
-| Agent | CLI | Flags |
-|-------|-----|-------|
-| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
-| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
-| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
+Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) - an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI agents.
 
 ## Monitoring
 
-### Live Console Monitor
-
 ```bash
+# Live console dashboard
 uv run python monitor-agents.py
-```
 
-Shows a live dashboard with:
-- Running / finished / unknown agent counts
-- Color-coded log streaming with `[run_xxx]` prefixes
-- Configurable poll and summary intervals
+# Background PID watchers
+./watch-agents.sh &          # 60-second polling
+nohup ./monitor-agents.sh &  # 10-minute polling
 
-### Background Watchers
-
-```bash
-# 60-second polling
-./watch-agents.sh &
-
-# 10-minute polling
-nohup ./monitor-agents.sh &
-```
-
-### Status Loop (Message Bus)
-
-```bash
-# Append status every 60 seconds to MESSAGE-BUS.md
-./status-loop.sh &
-
-# Append status every 5 minutes
-./status-loop-5m.sh &
+# Message bus status loop
+./status-loop.sh &           # Append status every 60s
 ```
 
 ## Configuration
-
-The framework uses environment variables for flexible deployment:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
