@@ -4,7 +4,7 @@ title = 'run-agent'
 
 [module]
   [[module.imports]]
-    path = "github.com/theNewDynamic/gohugo-theme-ananke"
+    path = "github.com/theNewDynamic/gohugo-theme-ananke/v2"
 
 [markup]
   [markup.goldmark]

@@ -31,7 +31,11 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Install Hugo theme
-        run: hugo mod get
+        env:
+          HUGO_CACHEDIR: /tmp/hugo_cache
+        run: |
+          hugo mod tidy
+          hugo mod get -u
 
       - name: Build with Hugo
         env:
