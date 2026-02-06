@@ -1,54 +1,62 @@
-# Project Agents Configuration
+# run-agent.sh -- AI Agent Configuration
 
-**Location:** Project root (`/AGENTS.md`)
-
-This is the root agent configuration file. All subsystem AGENTS.md files inherit from this.
+**Project:** [run-agent.sh](https://run-agent.jonnyzzz.com) -- Multi-Agent AI Orchestration for Software Development
 
 ---
 
-## Global Settings
+## Project Overview
+
+This repository contains two products:
+
+1. **`run-agent.sh`** -- A unified shell script that launches AI Agents (Claude, Codex, Gemini) with full isolation and traceability
+2. **`THE_PROMPT_v5.md`** -- A 13-stage orchestration workflow that coordinates AI Agents into a parallel development team
+
+Supporting files: role-specific prompts (`THE_PROMPT_v5_*.md`), monitoring scripts, and a Hugo-based website.
+
+---
+
+## Build & Development
 
 | Setting | Value |
 |---------|-------|
-| **Build Tool** | `<gradle/maven/npm/other>` |
-| **Test Framework** | `<junit/pytest/jest/other>` |
-| **Language** | `<kotlin/java/typescript/python/other>` |
-| **Code Style** | `<reference to style guide or config file>` |
+| **Site Generator** | Hugo (ananke theme v2) |
+| **Site Build** | Container-based (`hugomods/hugo:exts-0.145.0`) -- never install Hugo locally |
+| **Site URL** | https://run-agent.jonnyzzz.com |
+| **CI/CD** | GitHub Actions (`.github/workflows/hugo.yml`) |
+| **Language** | Shell (bash), Python (monitoring), Markdown (prompts, site content) |
+| **Package Manager** | `uv` for Python dependencies |
 
 ---
 
-## Available Agent Types
+## AI Agent Roles
 
-| Agent Type | Responsibilities | Preferred CLI |
-|------------|------------------|---------------|
-| **Orchestrator** | Task decomposition, coordination, synthesis | Claude Code |
-| **Research** | Codebase exploration, documentation analysis | Any |
-| **Implementation** | Code changes, new features, bug fixes | Codex (IntelliJ MCP) |
-| **Review** | Code review, quality assurance | All (cross-validation) |
-| **Test** | Test execution, coverage analysis | Codex (IntelliJ MCP) |
-| **Debug** | Debugging failing tests, investigating issues | Codex (IntelliJ MCP) |
+| Role | Prompt File | Purpose |
+|------|------------|---------|
+| **Orchestrator** | `THE_PROMPT_v5_orchestrator.md` | Coordinates the swarm, spawns sub-agents |
+| **Research** | `THE_PROMPT_v5_research.md` | Codebase exploration, no code changes |
+| **Implementation** | `THE_PROMPT_v5_implementation.md` | Code changes and tests |
+| **Review** | `THE_PROMPT_v5_review.md` | Code review and quality checks |
+| **Test** | `THE_PROMPT_v5_test.md` | Test execution and verification |
+| **Debug** | `THE_PROMPT_v5_debug.md` | Investigate failures, propose fixes |
+| **Monitor** | `THE_PROMPT_v5_monitor.md` | Periodic status checks and restarts |
 
 ---
 
-## Default Permissions
+## Supported AI Agent CLIs
 
-All agents inherit these permissions unless overridden:
+| AI Agent | CLI | Flags |
+|----------|-----|-------|
+| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
+| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
+| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
 
-### File Access
+---
 
-| Scope | Permission |
-|-------|------------|
-| `**/*.md` | Read |
-| `src/**/*` | Read, Write |
-| `tests/**/*` | Read, Write |
-| `build/**/*` | Read |
-| `*.config.*` | Read |
-
-### Tool Access
+## Tool Access
 
 | Tool | Access |
 |------|--------|
-| IntelliJ MCP Steroid | Full |
+| IntelliJ MCP Steroid | Full -- quality gates, inspections, builds |
 | Playwright MCP | Full |
 | File operations | Full |
 | Web search | Full |
@@ -56,61 +64,39 @@ All agents inherit these permissions unless overridden:
 
 ---
 
-## Project Conventions
+## Conventions
 
-### Code Style
+### Naming
 
-- Follow existing patterns in the codebase
-- Check `.editorconfig` for formatting rules
-- Use IDE inspections to catch issues
+- Write **AI Agent** (singular) or **AI Agents** (plural) -- always capitalized
+- Product names: `run-agent.sh` (The Runner), `THE_PROMPT_v5.md` (The Brain)
+- MCP Steroid plugin: always link to https://mcp-steroid.jonnyzzz.com
 
 ### Git Commits
 
 Format: `<type>(<scope>): <description>`
 
-Types:
-- `feat` - New feature
-- `fix` - Bug fix
-- `refactor` - Code refactoring
-- `test` - Test changes
-- `docs` - Documentation changes
-- `chore` - Build/config changes
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
-### Testing
+### Site Development
 
-- All new code must have tests
-- Tests must pass before committing
-- Use existing test patterns
-
----
-
-## Subsystem Registry
-
-| Subsystem | Path | AGENTS.md |
-|-----------|------|-----------|
-| `<name>` | `src/<path>` | `src/<path>/AGENTS.md` |
-| `<name>` | `src/<path>` | `src/<path>/AGENTS.md` |
+- Hugo site lives in `content/`, `layouts/`, `static/`
+- Always build Hugo in a container, never install locally
+- Use `docker run` with `hugomods/hugo:exts-0.145.0` for local preview
+- Custom CSS in `static/css/custom.css`, use JetBrains Mono for code
 
 ---
 
 ## Communication Protocol
 
-All agents must:
-1. Write significant findings to MESSAGE-BUS.md
-2. Monitor MESSAGE-BUS.md for questions addressed to them
-3. Log errors to ISSUES.md
-4. Report completion via MESSAGE-BUS.md
-
-See message-bus-mcp/AGENT-GUIDE.md for message format specification (or docs/v3/COMMUNICATION-TRACEABILITY.md for legacy file-based protocol).
+All AI Agents must:
+1. Write significant findings to `MESSAGE-BUS.md`
+2. Monitor `MESSAGE-BUS.md` for questions addressed to them
+3. Log errors to `ISSUES.md`
+4. Report completion via `MESSAGE-BUS.md`
 
 ---
 
-## Customization Notes
+## Author
 
-<!--
-Add project-specific notes here:
-- Special build requirements
-- CI/CD considerations
-- External service dependencies
-- Team conventions not covered above
--->
+[Eugene Petrenko](https://jonnyzzz.com) ([@jonnyzzz](https://github.com/jonnyzzz))

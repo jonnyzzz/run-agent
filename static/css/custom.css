@@ -1,16 +1,21 @@
 /* JetBrains Mono for code snippets */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base typography */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #1a1a2e;
+  line-height: 1.7;
+}
 
 code, pre, .highlight code, .highlight pre {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Inline code styling */
-p code, li code, td code, h3 code {
-  background: #f0f0f0;
-  padding: 0.15em 0.4em;
-  border-radius: 3px;
-  font-size: 0.9em;
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
 }
 
 /* Smaller logo in nav */
@@ -19,44 +24,274 @@ nav img {
   width: auto;
 }
 
-/* Product cards side-by-side */
+/* ===== Article content styling ===== */
+article {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Hero tagline */
+article > p:first-of-type {
+  font-size: 1.25rem;
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+/* Section headings */
+article h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0d1b2a;
+  margin-top: 3rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid #00bcd4;
+}
+
+article h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1b2838;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ===== Product cards ===== */
+.product-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+article > div[style*="display: flex"] {
+  gap: 1.5rem !important;
+  margin: 1.5rem 0 !important;
+}
+
+article > div[style*="display: flex"] > div {
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 2rem !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+article > div[style*="display: flex"] > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Cyan accent for The Runner */
+article > div[style*="display: flex"] > div:first-child {
+  border-top: 4px solid #00bcd4 !important;
+}
+
+/* Navy accent for The Brain */
+article > div[style*="display: flex"] > div:last-child {
+  border-top: 4px solid #1a237e !important;
+}
+
+article > div[style*="display: flex"] > div h3 {
+  margin-top: 0;
+  color: #0d1b2a;
+}
+
+article > div[style*="display: flex"] > div h3 code {
+  font-size: 1.1rem;
+  background: none;
+  padding: 0;
+  color: #0d1b2a;
+}
+
+article > div[style*="display: flex"] > div p strong:first-child {
+  display: inline-block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+article > div[style*="display: flex"] > div a[href*="github"] {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: #0d1b2a;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+article > div[style*="display: flex"] > div a[href*="github"]:hover {
+  background: #1a2d4a;
+}
+
+/* ===== Feature sections ===== */
+article > h3:nth-of-type(1),
+article > h3:nth-of-type(2),
+article > h3:nth-of-type(3) {
+  position: relative;
+  padding-left: 0;
+}
+
+/* ===== Inline code styling ===== */
+p code, li code, td code, h3 code {
+  background: #e8edf3;
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: #1a237e;
+}
+
+/* ===== Code blocks ===== */
+pre {
+  border-radius: 8px;
+  padding: 1.25rem;
+  overflow-x: auto;
+  background: #0d1b2a !important;
+  border: 1px solid #1a2d4a;
+  margin: 1.25rem 0;
+}
+
+pre code {
+  color: #e0e6ed !important;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.highlight pre {
+  background: #0d1b2a !important;
+}
+
+/* ===== Tables ===== */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.25rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+th {
+  background: #0d1b2a;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: none;
+}
+
+td {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e8edf3;
+  font-size: 0.9rem;
+  border-left: none;
+  border-right: none;
+}
+
+tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+tr:hover {
+  background: #eef2f7;
+}
+
+/* ===== Horizontal rules ===== */
+article hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00bcd4, #1a237e, transparent);
+  margin: 3rem 0;
+}
+
+/* ===== Lists ===== */
+article ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+article ul li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+article ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  background: #00bcd4;
+  border-radius: 2px;
+}
+
+/* Keep ordered list numbers */
+article ol {
+  padding-left: 1.5rem;
+}
+
+/* ===== Links ===== */
+article a {
+  color: #1a237e;
+  text-decoration: none;
+  border-bottom: 1px solid #00bcd4;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+article a:hover {
+  color: #00bcd4;
+  border-bottom-color: #1a237e;
+}
+
+/* ===== Blockquotes (for emphasis) ===== */
+blockquote {
+  border-left: 4px solid #00bcd4;
+  background: #f0f7fa;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+/* ===== Footer ===== */
+footer {
+  background: #0d1b2a !important;
+}
+
+footer a {
+  color: #00bcd4 !important;
+}
+
+/* ===== Responsive ===== */
 @media (min-width: 768px) {
-  article > div[style*="display: flex"] {
-    align-items: stretch;
-  }
   article > div[style*="display: flex"] > div {
     display: flex;
     flex-direction: column;
   }
 }
 
-/* Tables */
-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1rem 0;
-}
-th, td {
-  border: 1px solid #ddd;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-}
-th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-tr:nth-child(even) {
-  background: #fafafa;
-}
+@media (max-width: 767px) {
+  article {
+    padding: 0 1rem;
+  }
 
-/* Code blocks */
-pre {
-  border-radius: 6px;
-  padding: 1rem;
-  overflow-x: auto;
-}
-
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
+  article h2 {
+    font-size: 1.4rem;
+  }
 }

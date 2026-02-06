@@ -1,12 +1,12 @@
 # run-agent.sh: The Missing Runtime for AI Development
 
 ## 1. Elevator Pitch
-**run-agent.sh** is a lightweight, battle-tested orchestration framework that turns raw LLMs into a coordinated, parallel software development team. It combines a unified runner for launching isolated AI agents (Claude, Codex, Gemini) with a rigorous 13-stage workflow to take tasks from research to merged PR with full traceability.
+**run-agent.sh** is a lightweight, battle-tested orchestration framework that turns raw LLMs into a coordinated, parallel software development team. It combines a unified runner for launching isolated AI Agents (Claude, Codex, Gemini) with a rigorous 13-stage workflow to take tasks from research to merged PR with full traceability.
 
 ## 2. Core Value Propositions
 
 ### 🚀 Agentic Swarm
-Don't wait for one bot to finish. Spin up to **16 parallel AI agents** simultaneously. Separate concerns by having dedicated agents for research, implementation, and review working at the same time on the same codebase.
+Don't wait for one bot to finish. Spin up to **16 parallel AI Agents** simultaneously. Separate concerns by having dedicated agents for research, implementation, and review working at the same time on the same codebase.
 
 ### 🧠 THE_PROMPT_v5.md: The Brain
 This isn't just a script; it's a methodology. Included is a proven **13-stage orchestration workflow** that defines strict roles (Orchestrator, Research, Implementation, Review, Test, Debug, Monitor) and quality gates. It turns "chatting with AI" into a disciplined engineering process.

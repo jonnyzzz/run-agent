@@ -1,6 +1,6 @@
 # run-agent.sh
 
-**Orchestrate a swarm of AI agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
+**Orchestrate a swarm of AI Agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
 
 Parallel AI. Zero magic. Full control.
 
@@ -8,7 +8,7 @@ Parallel AI. Zero magic. Full control.
 
 ## `run-agent.sh` -- The Runner
 
-A unified shell script that launches AI agents (Claude, Codex, Gemini) with full isolation and traceability. Each run gets its own folder with captured prompts, stdout/stderr, PID tracking, and exit codes.
+A unified shell script that launches AI Agents (Claude, Codex, Gemini) with full isolation and traceability. Each run gets its own folder with captured prompts, stdout/stderr, PID tracking, and exit codes.
 
 ```bash
 ./run-agent.sh claude /path/to/repo prompt.md
@@ -20,7 +20,7 @@ Works best with [THE_PROMPT_v5.md](#the_prompt_v5md----the-brain) to orchestrate
 
 ## `THE_PROMPT_v5.md` -- The Brain
 
-A project-independent orchestration workflow that defines roles, stages, quality gates, and communication protocols for AI agents. It turns raw LLMs into a coordinated development team.
+A project-independent orchestration workflow that defines roles, stages, quality gates, and communication protocols for AI Agents. It turns raw LLMs into a coordinated development team.
 
 **13 stages** from research to deployment. **7 agent roles** from orchestrator to monitor. **16 parallel agents** max.
 
@@ -32,7 +32,7 @@ Works best with [run-agent.sh](#run-agentsh----the-runner) to execute the orches
 
 ### Agentic Swarm
 
-Run up to **16 AI agents in parallel** -- research, implementation, review, testing, and debugging agents all working on the same codebase simultaneously. The orchestrator agent coordinates the swarm, splits work by subsystem, and enforces review quorums before commits land.
+Run up to **16 AI Agents in parallel** -- research, implementation, review, testing, and debugging agents all working on the same codebase simultaneously. The orchestrator agent coordinates the swarm, splits work by subsystem, and enforces review quorums before commits land.
 
 Each agent has a **fixed role** defined by dedicated prompt files. Agents don't improvise -- they follow the staged workflow, log actions to the message bus, and report blockers. The result is deterministic, reproducible multi-agent development.
 
@@ -139,7 +139,7 @@ uv run python monitor-agents.py
 
 ## MCP Steroid Integration
 
-Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) - an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI agents.
+Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) - an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI Agents.
 
 ## Monitoring
 
