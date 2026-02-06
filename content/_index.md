@@ -3,9 +3,7 @@ title: "run-agent.sh"
 description: "Multi-Agent AI Orchestration for Software Development"
 ---
 
-**Two tools. One framework. Ship code with parallel AI agents.**
-
-<img src="/images/hero.png" alt="AI agents orchestrating code" style="width: 100%; border-radius: 8px; margin: 1rem 0;">
+**Orchestrate a swarm of AI agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
 
 ---
 
@@ -23,9 +21,9 @@ A unified shell script that launches AI agents (Claude, Codex, Gemini) with full
 ./run-agent.sh gemini /path/to/repo prompt.md
 ```
 
-Works best with [THE_PROMPT_v5.md](#the_prompt_v5md---the-brain) to orchestrate multi-agent workflows.
+Works best with [THE_PROMPT_v5.md](#the-brain) to orchestrate multi-agent workflows.
 
-[View run-agent.sh on GitHub](https://github.com/jonnyzzz/run-agent/blob/main/run-agent.sh)
+[View on GitHub](https://github.com/jonnyzzz/run-agent/blob/main/run-agent.sh)
 
 </div>
 <div style="flex: 1; min-width: 300px; border: 2px solid #1a237e; border-radius: 8px; padding: 1.5rem;">
@@ -37,12 +35,49 @@ A project-independent orchestration workflow that defines roles, stages, quality
 
 **13 stages** from research to deployment. **7 agent roles** from orchestrator to monitor. **16 parallel agents** max.
 
-Works best with [run-agent.sh](#run-agentsh---the-runner) to execute the orchestrated workflow.
+Works best with [run-agent.sh](#the-runner) to execute the orchestrated workflow.
 
-[View THE_PROMPT_v5.md on GitHub](https://github.com/jonnyzzz/run-agent/blob/main/THE_PROMPT_v5.md)
+[View on GitHub](https://github.com/jonnyzzz/run-agent/blob/main/THE_PROMPT_v5.md)
 
 </div>
 </div>
+
+---
+
+## Core Features
+
+### Agentic Swarm
+
+Run up to **16 AI agents in parallel** -- research, implementation, review, testing, and debugging agents all working on the same codebase simultaneously. The orchestrator agent coordinates the swarm, splits work by subsystem, and enforces review quorums before commits land.
+
+Each agent has a **fixed role** defined by dedicated prompt files. Agents don't improvise -- they follow the staged workflow, log actions to the message bus, and report blockers. The result is deterministic, reproducible multi-agent development.
+
+### Message Bus
+
+Every significant action flows through `MESSAGE-BUS.md` -- an append-only trace log that provides **full observability** into the swarm. Agents write structured entries:
+
+- **FACT**: Concrete results (test counts, commit hashes, file paths)
+- **PROGRESS**: In-flight status updates
+- **DECISION**: Policy choices with rationale
+- **REVIEW**: Structured code review feedback
+- **ERROR**: Failures that block progress
+
+The message bus is the single source of truth. Agents read it to coordinate, the orchestrator reads it to decide next steps, and you read it to understand what happened. Combined with per-run artifact folders, every agent action is fully traceable.
+
+### Full Traceability
+
+Every agent invocation creates an isolated run folder:
+
+```
+runs/run_20260128-194528-12345/
+  prompt.md           # Exact prompt sent to the agent
+  agent-stdout.txt    # Everything the agent produced
+  agent-stderr.txt    # Errors and warnings
+  cwd.txt             # Working directory, command, exit code
+  run-agent.sh        # Copy of the runner for reproducibility
+```
+
+No lost context. No "what did the agent do?" mysteries. Every run is a self-contained, auditable record.
 
 ---
 
@@ -51,38 +86,18 @@ Works best with [run-agent.sh](#run-agentsh---the-runner) to execute the orchest
 ```
 THE_PROMPT_v5.md                    run-agent.sh
 (defines the workflow)              (executes agents)
-         │                                │
-         ├── Stage 0: Cleanup             ├── ./run-agent.sh claude ...
-         ├── Stage 2: Research    ──────► ├── ./run-agent.sh codex ...
-         ├── Stage 5: Implement   ──────► ├── ./run-agent.sh gemini ...
-         ├── Stage 6: Quality Gate        │
-         ├── Stage 9: Review      ──────► ├── ./run-agent.sh claude ...
-         └── Stage 12: Monitor            └── (all outputs in runs/)
+         |                                |
+         |-- Stage 0: Cleanup             |-- ./run-agent.sh claude ...
+         |-- Stage 2: Research    ------> |-- ./run-agent.sh codex ...
+         |-- Stage 5: Implement   ------> |-- ./run-agent.sh gemini ...
+         |-- Stage 6: Quality Gate        |
+         |-- Stage 9: Review      ------> |-- ./run-agent.sh claude ...
+         |-- Stage 12: Monitor            |-- (all outputs in runs/)
+                                          |
+                MESSAGE-BUS.md  <---------|  (append-only trace log)
 ```
 
-`THE_PROMPT_v5.md` tells agents **what to do** and **in what order**. `run-agent.sh` handles **how to run them** with full artifact capture. Together, they turn your terminal into a multi-agent development shop.
-
----
-
-## Agent Roles (defined in THE_PROMPT_v5.md)
-
-| Role | Prompt File | Purpose |
-|------|------------|---------|
-| **Orchestrator** | `THE_PROMPT_v5_orchestrator.md` | Coordinates full workflow, spawns sub-agents |
-| **Research** | `THE_PROMPT_v5_research.md` | Codebase exploration, no code changes |
-| **Implementation** | `THE_PROMPT_v5_implementation.md` | Code changes and tests |
-| **Review** | `THE_PROMPT_v5_review.md` | Code review and quality checks |
-| **Test** | `THE_PROMPT_v5_test.md` | Test execution and verification |
-| **Debug** | `THE_PROMPT_v5_debug.md` | Investigate failures, propose fixes |
-| **Monitor** | `THE_PROMPT_v5_monitor.md` | Periodic status checks and restarts |
-
-## Supported Agents (launched by run-agent.sh)
-
-| Agent | CLI | Flags |
-|-------|-----|-------|
-| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
-| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
-| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
+`THE_PROMPT_v5.md` tells agents **what to do** and **in what order**. `run-agent.sh` handles **how to run them** with full artifact capture. The message bus ties it all together with real-time observability.
 
 ---
 
@@ -104,80 +119,68 @@ Defined in `THE_PROMPT_v5.md`, executed by `run-agent.sh`:
 11. **Push/preflight** - Feature branch, code review
 12. **Monitor/fix** - Watch CI and apply fixes
 
+## Agent Roles
+
+| Role | Prompt File | Purpose |
+|------|------------|---------|
+| **Orchestrator** | `THE_PROMPT_v5_orchestrator.md` | Coordinates the swarm, spawns sub-agents |
+| **Research** | `THE_PROMPT_v5_research.md` | Codebase exploration, no code changes |
+| **Implementation** | `THE_PROMPT_v5_implementation.md` | Code changes and tests |
+| **Review** | `THE_PROMPT_v5_review.md` | Code review and quality checks |
+| **Test** | `THE_PROMPT_v5_test.md` | Test execution and verification |
+| **Debug** | `THE_PROMPT_v5_debug.md` | Investigate failures, propose fixes |
+| **Monitor** | `THE_PROMPT_v5_monitor.md` | Periodic status checks and restarts |
+
+## Supported Agents
+
+| Agent | CLI | Flags |
+|-------|-----|-------|
+| **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
+| **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
+| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
+
 ---
 
 ## Quick Start
 
-### 1. Get the files
-
 ```bash
 git clone https://github.com/jonnyzzz/run-agent.git
 cd run-agent
-```
 
-### 2. Run an agent
-
-```bash
-# Run a Claude agent with a prompt
+# Launch a Claude agent
 ./run-agent.sh claude /path/to/your/repo your-prompt.md
 
-# Run a Codex agent
-./run-agent.sh codex /path/to/your/repo your-prompt.md
+# Launch a swarm -- run multiple agents in parallel
+./run-agent.sh claude /path/to/repo research-prompt.md &
+./run-agent.sh codex /path/to/repo implement-prompt.md &
+./run-agent.sh gemini /path/to/repo review-prompt.md &
 
-# Run a Gemini agent
-./run-agent.sh gemini /path/to/your/repo your-prompt.md
+# Monitor the swarm
+uv run python monitor-agents.py
 ```
 
-### 3. Monitor agents
+## Monitoring
 
 ```bash
-# Live console dashboard
+# Live console dashboard with color-coded agent logs
 uv run python monitor-agents.py
 
-# Background PID watchers
+# Background watchers
 ./watch-agents.sh &          # 60-second polling
 nohup ./monitor-agents.sh &  # 10-minute polling
 
-# Message bus status loop
-./status-loop.sh &           # Append status every 60s
+# Status loop -- append swarm status to message bus
+./status-loop.sh &           # Every 60 seconds
+./status-loop-5m.sh &        # Every 5 minutes
 ```
-
-### 4. Check run artifacts
-
-Each agent run creates a folder under `runs/` with:
-- `prompt.md` - the input prompt
-- `agent-stdout.txt` / `agent-stderr.txt` - captured output
-- `cwd.txt` - execution context and exit code
-- `pid.txt` - PID tracking (removed on completion)
 
 ---
 
 ## MCP Steroid Integration
 
-Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) - an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI agents.
+Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroid](https://mcp-steroid.jonnyzzz.com) -- an MCP server for IntelliJ-based IDEs that provides code review, search, run configurations, builds, inspections, and quality gates to AI agents.
 
-`THE_PROMPT_v5.md` makes MCP Steroid the **primary tool** for:
-- Code inspections and Find Usages
-- Running tests and builds
-- Quality gate verification (no new warnings/errors)
-- File navigation and search
-
----
-
-## All Files
-
-```
-run-agent.sh                  # The Runner - unified agent launcher
-THE_PROMPT_v5.md              # The Brain - master orchestration guide
-THE_PROMPT_v5_*.md            # Role-specific prompts (7 roles)
-monitor-agents.py             # Live console monitor
-monitor-agents.sh             # Background PID monitor (10min)
-watch-agents.sh               # Background PID monitor (60s)
-status-loop.sh                # Message bus status appender (60s)
-status-loop-5m.sh             # Message bus status appender (5min)
-run-agent-tests.sh            # Integration tests
-test-claude-run.sh            # Claude sanity check
-```
+`THE_PROMPT_v5.md` makes MCP Steroid the **primary tool** for quality gates: no new warnings, no new errors, compilation must succeed before any commit.
 
 ## Configuration
 
@@ -194,4 +197,4 @@ test-claude-run.sh            # Claude sanity check
 
 ## Author
 
-[Eugene Petrenko](https://jonnyzzz.com) ([@jonnyzzz](https://github.com/jonnyzzz))
+Created by [Eugene Petrenko](https://jonnyzzz.com) ([@jonnyzzz](https://github.com/jonnyzzz)) -- building the future of AI-assisted software development.

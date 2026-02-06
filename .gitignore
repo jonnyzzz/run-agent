@@ -11,5 +11,6 @@ resources/
 .hugo_build.lock
 nanobanana-output/
 prompt-generate-*.md
+prompt-marketing-*.md
 *.png
 !static/**/*.png

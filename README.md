@@ -1,6 +1,8 @@
 # run-agent.sh
 
-**Two tools. One framework. Ship code with parallel AI agents.**
+**Orchestrate a swarm of AI agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
+
+Parallel AI. Zero magic. Full control.
 
 ---
 
@@ -14,7 +16,7 @@ A unified shell script that launches AI agents (Claude, Codex, Gemini) with full
 ./run-agent.sh gemini /path/to/repo prompt.md
 ```
 
-Works best with **THE_PROMPT_v5.md** to orchestrate multi-agent workflows.
+Works best with [THE_PROMPT_v5.md](#the_prompt_v5md----the-brain) to orchestrate multi-agent workflows.
 
 ## `THE_PROMPT_v5.md` -- The Brain
 
@@ -22,7 +24,44 @@ A project-independent orchestration workflow that defines roles, stages, quality
 
 **13 stages** from research to deployment. **7 agent roles** from orchestrator to monitor. **16 parallel agents** max.
 
-Works best with **run-agent.sh** to execute the orchestrated workflow.
+Works best with [run-agent.sh](#run-agentsh----the-runner) to execute the orchestrated workflow.
+
+---
+
+## Core Features
+
+### Agentic Swarm
+
+Run up to **16 AI agents in parallel** -- research, implementation, review, testing, and debugging agents all working on the same codebase simultaneously. The orchestrator agent coordinates the swarm, splits work by subsystem, and enforces review quorums before commits land.
+
+Each agent has a **fixed role** defined by dedicated prompt files. Agents don't improvise -- they follow the staged workflow, log actions to the message bus, and report blockers. The result is deterministic, reproducible multi-agent development.
+
+### Message Bus
+
+Every significant action flows through `MESSAGE-BUS.md` -- an append-only trace log that provides **full observability** into the swarm. Agents write structured entries:
+
+- **FACT**: Concrete results (test counts, commit hashes, file paths)
+- **PROGRESS**: In-flight status updates
+- **DECISION**: Policy choices with rationale
+- **REVIEW**: Structured code review feedback
+- **ERROR**: Failures that block progress
+
+The message bus is the single source of truth. Agents read it to coordinate, the orchestrator reads it to decide next steps, and you read it to understand what happened.
+
+### Full Traceability
+
+Every agent invocation creates an isolated run folder:
+
+```
+runs/run_20260128-194528-12345/
+  prompt.md           # Exact prompt sent to the agent
+  agent-stdout.txt    # Everything the agent produced
+  agent-stderr.txt    # Errors and warnings
+  cwd.txt             # Working directory, command, exit code
+  run-agent.sh        # Copy of the runner for reproducibility
+```
+
+No lost context. No "what did the agent do?" mysteries. Every run is a self-contained, auditable record.
 
 ---
 
@@ -31,16 +70,18 @@ Works best with **run-agent.sh** to execute the orchestrated workflow.
 ```
 THE_PROMPT_v5.md                    run-agent.sh
 (defines the workflow)              (executes agents)
-         │                                │
-         ├── Stage 0: Cleanup             ├── ./run-agent.sh claude ...
-         ├── Stage 2: Research    ──────► ├── ./run-agent.sh codex ...
-         ├── Stage 5: Implement   ──────► ├── ./run-agent.sh gemini ...
-         ├── Stage 6: Quality Gate        │
-         ├── Stage 9: Review      ──────► ├── ./run-agent.sh claude ...
-         └── Stage 12: Monitor            └── (all outputs in runs/)
+         |                                |
+         |-- Stage 0: Cleanup             |-- ./run-agent.sh claude ...
+         |-- Stage 2: Research    ------> |-- ./run-agent.sh codex ...
+         |-- Stage 5: Implement   ------> |-- ./run-agent.sh gemini ...
+         |-- Stage 6: Quality Gate        |
+         |-- Stage 9: Review      ------> |-- ./run-agent.sh claude ...
+         |-- Stage 12: Monitor            |-- (all outputs in runs/)
+                                          |
+                MESSAGE-BUS.md  <---------|  (append-only trace log)
 ```
 
-`THE_PROMPT_v5.md` tells agents **what to do** and **in what order**. `run-agent.sh` handles **how to run them** with full artifact capture. Together, they turn your terminal into a multi-agent development shop.
+`THE_PROMPT_v5.md` tells agents **what to do** and **in what order**. `run-agent.sh` handles **how to run them** with full artifact capture. The message bus ties it all together with real-time observability.
 
 ## Quick Start
 
@@ -48,18 +89,17 @@ THE_PROMPT_v5.md                    run-agent.sh
 git clone https://github.com/jonnyzzz/run-agent.git
 cd run-agent
 
-# Run a Claude agent
+# Launch a Claude agent
 ./run-agent.sh claude /path/to/your/repo your-prompt.md
 
-# Monitor all running agents
+# Launch a swarm -- run multiple agents in parallel
+./run-agent.sh claude /path/to/repo research-prompt.md &
+./run-agent.sh codex /path/to/repo implement-prompt.md &
+./run-agent.sh gemini /path/to/repo review-prompt.md &
+
+# Monitor the swarm
 uv run python monitor-agents.py
 ```
-
-Each agent run creates a folder under `runs/` with:
-- `prompt.md` - the input prompt
-- `agent-stdout.txt` / `agent-stderr.txt` - captured output
-- `cwd.txt` - execution context and exit code
-- `pid.txt` - PID tracking (removed on completion)
 
 ## Agent Roles (defined in THE_PROMPT_v5.md)
 
@@ -104,15 +144,16 @@ Both `run-agent.sh` and `THE_PROMPT_v5.md` are designed to work with [MCP Steroi
 ## Monitoring
 
 ```bash
-# Live console dashboard
+# Live console dashboard with color-coded agent logs
 uv run python monitor-agents.py
 
-# Background PID watchers
+# Background watchers
 ./watch-agents.sh &          # 60-second polling
 nohup ./monitor-agents.sh &  # 10-minute polling
 
-# Message bus status loop
-./status-loop.sh &           # Append status every 60s
+# Status loop -- append swarm status to message bus
+./status-loop.sh &           # Every 60 seconds
+./status-loop-5m.sh &        # Every 5 minutes
 ```
 
 ## Configuration
@@ -122,10 +163,14 @@ nohup ./monitor-agents.sh &  # 10-minute polling
 | `RUNS_DIR` | `./runs` | Directory for agent run folders |
 | `MESSAGE_BUS` | `./MESSAGE-BUS.md` | Append-only trace log |
 
+## Website
+
+[run-agent.jonnyzzz.com](https://run-agent.jonnyzzz.com)
+
 ## License
 
 [Apache License 2.0](LICENSE)
 
 ## Author
 
-[Eugene Petrenko](https://jonnyzzz.com) ([@jonnyzzz](https://github.com/jonnyzzz))
+Created by [Eugene Petrenko](https://jonnyzzz.com) ([@jonnyzzz](https://github.com/jonnyzzz)) -- building the future of AI-assisted software development.
