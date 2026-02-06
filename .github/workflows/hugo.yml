@@ -20,6 +20,9 @@ jobs:
     container:
       image: hugomods/hugo:exts-0.145.0
     steps:
+      - name: Install GNU tar (needed by upload-pages-artifact)
+        run: apk add --no-cache tar
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
