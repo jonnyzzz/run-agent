@@ -16,3 +16,4 @@ prompt-marketing-*.md
 !static/**/*.png
 
 .idea/
+!static/MESSAGE-BUS.md
