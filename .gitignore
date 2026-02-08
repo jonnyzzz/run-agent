@@ -17,3 +17,4 @@ prompt-marketing-*.md
 
 .idea/
 !static/MESSAGE-BUS.md
+.tmp/
