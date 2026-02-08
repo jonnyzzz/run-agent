@@ -101,6 +101,22 @@ cd run-agent
 uv run python monitor-agents.py
 ```
 
+## Website Build (Docker Compose)
+
+Build the static site in Docker (this is the standard project flow):
+
+```bash
+UID="$(id -u)" GID="$(id -g)" docker compose run --rm hugo-build
+```
+
+Run a local preview server:
+
+```bash
+UID="$(id -u)" GID="$(id -g)" docker compose up hugo-serve
+```
+
+Compose uses Hugo `--forceSyncStatic` so static assets are recopied into `public/` on each build and serve run.
+
 ## Agent Roles (defined in THE_PROMPT_v5.md)
 
 | Role | Prompt File | Purpose |

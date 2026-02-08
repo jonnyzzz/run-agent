@@ -22,7 +22,7 @@ Supporting files: role-specific prompts (`THE_PROMPT_v5_*.md`), monitoring scrip
 | **Site Generator** | Hugo (ananke theme v2) |
 | **Site Build** | Container-based (`hugomods/hugo:exts-0.145.0`) -- never install Hugo locally |
 | **Site URL** | https://run-agent.jonnyzzz.com |
-| **CI/CD** | GitHub Actions (`.github/workflows/hugo.yml`) |
+| **CI/CD** | Local Docker Compose workflow (`docker-compose.yml`) |
 | **Language** | Shell (bash), Python (monitoring), Markdown (prompts, site content) |
 | **Package Manager** | `uv` for Python dependencies |
 
@@ -82,7 +82,9 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
 - Hugo site lives in `content/`, `layouts/`, `static/`
 - Always build Hugo in a container, never install locally
-- Use `docker run` with `hugomods/hugo:exts-0.145.0` for local preview
+- Use `docker compose run --rm hugo-build` for the standard local production build
+- Use `docker compose up hugo-serve` for local preview at `http://localhost:1313`
+- Compose commands use Hugo `--forceSyncStatic` so static assets are recopied on each run
 - Custom CSS in `static/css/custom.css`, use JetBrains Mono for code
 
 ---

@@ -1,0 +1,37 @@
+services:
+  hugo-build:
+    image: hugomods/hugo:exts-0.145.0
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /src
+    volumes:
+      - ./:/src
+    environment:
+      HUGO_ENVIRONMENT: production
+    command:
+      - hugo
+      - --minify
+      - --forceSyncStatic
+      - --baseURL
+      - ${HUGO_BASE_URL:-https://run-agent.jonnyzzz.com/}
+
+  hugo-serve:
+    image: hugomods/hugo:exts-0.145.0
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /src
+    volumes:
+      - ./:/src
+    ports:
+      - "1313:1313"
+    environment:
+      HUGO_ENVIRONMENT: development
+    command:
+      - hugo
+      - server
+      - --bind
+      - 0.0.0.0
+      - --port
+      - "1313"
+      - --baseURL
+      - ${HUGO_BASE_URL:-http://localhost:1313/}
+      - --disableFastRender
+      - --forceSyncStatic
