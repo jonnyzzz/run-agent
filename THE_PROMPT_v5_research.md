@@ -9,7 +9,7 @@ Collect information, identify low-risk tasks, patterns, and relevant modules. Do
 See <PROJECT_ROOT>/THE_PROMPT_v5.md for placeholder definitions.
 - Work only in the target repo specified in your run prompt.
 - No code changes, no commits, no formatting.
-- Use IntelliJ MCP Steroid for search and navigation where possible.
+- Use MCP Steroid for search and navigation where possible.
 - Log findings to <MESSAGE_BUS>; log blockers to <ISSUES_FILE>.
 
 ## Required Actions

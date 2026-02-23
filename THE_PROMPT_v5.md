@@ -3,7 +3,7 @@
 "start agent", or "start sub agent" in this document always means to start the repo-provided agent runner or command line for the chosen agent.
 
 ## Purpose
-This document captures a project-independent orchestration workflow that can be applied to any codebase while keeping the IntelliJ MCP Steroid server as the primary tool.
+This document captures a project-independent orchestration workflow that can be applied to any codebase while keeping the MCP Steroid server as the primary tool.
 
 ## Distribution
 All orchestration files are published at **https://run-agent.jonnyzzz.com/** and licensed under [Apache License 2.0](https://run-agent.jonnyzzz.com/LICENSE).
@@ -37,16 +37,16 @@ Use these placeholders to avoid hardcoded paths:
 - This document and the root role prompts are the primary source of truth; project-specific prompts should be minimal overrides that reference these files.
 - If the target codebase is outside <PROJECT_ROOT>, the root agent must not modify it directly; use sub-agents with CWD set to the target repo.
 - Log significant actions to <MESSAGE_BUS> (append-only) and blockers to <ISSUES_FILE>.
-- IntelliJ MCP Steroid review is required for changes; compilation/build must succeed before completion when builds/tests exist.
-- Prefer IntelliJ MCP Steroid for search, review, run configs, and builds/tests; CLI fallback only via project-provided scripts or wrappers.
+- MCP Steroid review is required for changes; compilation/build must succeed before completion when builds/tests exist.
+- Prefer MCP Steroid for search, review, run configs, and builds/tests; CLI fallback only via project-provided scripts or wrappers.
 - Avoid committing IDE-generated metadata unless explicitly required; keep such changes isolated.
 - Follow project commit rules; do not invent new formats.
 - Precedence (high to low): Required Development Flow > project-specific AGENTS/Instructions (only when explicitly conflicting) > this document > Standard Workflow template. Unresolved conflicts require research plus a logged DECISION.
-- If an auxiliary MCP server fails to start, treat as non-blocking and continue with IntelliJ MCP Steroid.
+- If an auxiliary MCP server fails to start, treat as non-blocking and continue with MCP Steroid.
 - If a branch is dirty due to IDE or tool artifacts, avoid rebasing until cleaned; create a cleanup task to revert artifacts and add ignore rules.
 
 ## Known Environment or Tool Issues
-Maintain a short list of recurring MCP/tool startup issues and required fallbacks in project docs; treat these as non-blocking unless they prevent core IntelliJ MCP Steroid workflows.
+Maintain a short list of recurring MCP/tool startup issues and required fallbacks in project docs; treat these as non-blocking unless they prevent core MCP Steroid workflows.
 
 ## Role-Specific Prompts (Required)
 Each agent run must use a dedicated role prompt file. Do not improvise or redefine roles.
@@ -83,7 +83,7 @@ Required steps for every agent run:
 All inputs/outputs must be persisted under the same <RUNS_DIR>/run_XXX/ folder (prompt, logs, artifacts). If your repo uses a different layout, ensure the equivalent artifacts are captured.
 
 ### Status Checks
-- Use pid.txt (while present) to verify running agents (ps -p <pid>). If shell access is restricted, read pid.txt, cwd.txt, and recent log files via IntelliJ MCP Steroid instead.
+- Use pid.txt (while present) to verify running agents (ps -p <pid>). If shell access is restricted, read pid.txt, cwd.txt, and recent log files via MCP Steroid instead.
 - For completed runs, pid.txt is removed; use EXIT_CODE= in <RUNS_DIR>/<run_id>/cwd.txt to confirm finished status.
 - Optional watcher: run ./watch-agents.sh to poll every 60s and log to <RUNS_DIR>/agent-watch.log.
 - Long-interval watcher: run ./monitor-agents.sh to poll every 10 minutes and log to <RUNS_DIR>/agent-watch.log.
@@ -120,19 +120,19 @@ Each bullet below is a distinct agent stage. The root agent selects the agent ty
    Run at least two agents in parallel (research and implementation) to scope the task. Use the project's agent startup docs to confirm flags and tool availability.
 
 4. Stage 3: Select tasks (low-hanging fruit first)
-   Choose actionable tasks based on IntelliJ MCP Steroid exploration of the codebase.
+   Choose actionable tasks based on MCP Steroid exploration of the codebase.
 
 5. Stage 4: Select and validate tests/build
-   Pick relevant unit/integration tests and verify they pass in IntelliJ MCP Steroid; also ensure the project builds in IntelliJ MCP Steroid when builds/tests exist. If no tests/builds apply, log N/A to <MESSAGE_BUS>. Long-running CI can run asynchronously.
+   Pick relevant unit/integration tests and verify they pass in MCP Steroid; also ensure the project builds in MCP Steroid when builds/tests exist. If no tests/builds apply, log N/A to <MESSAGE_BUS>. Long-running CI can run asynchronously.
 
 6. Stage 5: Implement changes and tests
    Make code changes and add/update tests.
 
-7. Stage 6: IntelliJ MCP quality gate
-   Verify no new warnings/errors/suggestions in IntelliJ MCP Steroid.
+7. Stage 6: MCP Steroid quality gate
+   Verify no new warnings/errors/suggestions in MCP Steroid.
 
-8. Stage 7: Re-run tests in IntelliJ MCP
-   Re-run relevant tests in IntelliJ MCP Steroid.
+8. Stage 7: Re-run tests in MCP Steroid
+   Re-run relevant tests in MCP Steroid.
 
 9. Stage 8: Research authorship and patterns
    Use git annotate/blame and project review tools to identify maintainers and align with existing patterns.
@@ -141,7 +141,7 @@ Each bullet below is a distinct agent stage. The root agent selects the agent ty
    Validate commit rules. For code review, require a quorum of at least two independent agents for non-trivial/multi-line changes; trivial changes can be handled by a single root-review agent. If the project mandates more reviewers, follow that requirement.
 
 11. Stage 10: Rebase, rebuild, and tests
-    Squash or split into logical commits, rebase on latest main/master once the workspace is clean, verify compilation in IntelliJ MCP Steroid, and re-run related tests.
+    Squash or split into logical commits, rebase on latest main/master once the workspace is clean, verify compilation in MCP Steroid, and re-run related tests.
 
 12. Stage 11: Push, preflight, and code review
     Push to a feature branch, run the project's preflight gate (for example, safe push) when applicable, create a code review, and log all links to MESSAGE-BUS.md. If preflight/review is not applicable, log N/A to <MESSAGE_BUS>.
@@ -183,8 +183,8 @@ New agents should begin with:
 5. A project development guide if present (for example, DEVELOPMENT-GUIDE.md)
 
 ## Tools and Access
-- IntelliJ MCP Steroid is the primary tool for code review, search, run configurations, and builds. Use it for analysis and file inspection when shell access is restricted.
-- Prefer IntelliJ MCP Steroid over raw CLI workflows whenever possible.
+- MCP Steroid is the primary tool for code review, search, run configurations, and builds. Use it for analysis and file inspection when shell access is restricted.
+- Prefer MCP Steroid over raw CLI workflows whenever possible.
 - Use no-sandbox runs when workspace sandbox blocks git or file writes outside the repo, but prefer standard sandboxed runs for safety.
 - Use project-specific CLI tools for review/preflight metadata; record their paths in Instructions.md.
 
@@ -202,11 +202,11 @@ If this template conflicts with the Required Development Flow, the Required Deve
 
 ### Phase 2: Implement Task-Specific Change
 1. Identify the change target(s) and scope.
-2. Run the relevant tests in IntelliJ MCP Steroid and record test list and counts.
+2. Run the relevant tests in MCP Steroid and record test list and counts.
 3. Implement the change using existing patterns.
 4. Re-run and verify test list parity and passing status.
-5. Inspect in IntelliJ MCP Steroid (file problems, find usages).
-6. Build in IntelliJ MCP Steroid when builds exist (compilation must succeed).
+5. Inspect in MCP Steroid (file problems, find usages).
+6. Build in MCP Steroid when builds exist (compilation must succeed).
 7. Commit following project rules when committing is required (include runId in the body if required).
 
 ### Phase 3: Reviews
@@ -215,7 +215,7 @@ If this template conflicts with the Required Development Flow, the Required Deve
 - Log all review outcomes in MESSAGE-BUS.md.
 
 ### Phase 4: Completion
-- Verify IntelliJ MCP Steroid review done and compilation succeeded.
+- Verify MCP Steroid review done and compilation succeeded.
 - Confirm tests for changed components pass.
 - Update ISSUES.md (resolve or document known failures).
 - Provide final summary to the user with links and commit hashes when available.

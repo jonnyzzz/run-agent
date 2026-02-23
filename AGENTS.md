@@ -56,7 +56,7 @@ Supporting files: role-specific prompts (`THE_PROMPT_v5_*.md`), monitoring scrip
 
 | Tool | Access |
 |------|--------|
-| IntelliJ MCP Steroid | Full -- quality gates, inspections, builds |
+| [MCP Steroid](https://mcp-steroid.jonnyzzz.com) | Full -- quality gates, inspections, builds |
 | Playwright MCP | Full |
 | File operations | Full |
 | Web search | Full |
