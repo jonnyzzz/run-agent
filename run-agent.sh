@@ -27,6 +27,25 @@ if [ ! -f "$PROMPT_FILE" ]; then
   exit 1
 fi
 
+# Check if the requested agent is enabled via RUN_AGENT_ENABLED
+# Default: all agents enabled (empty or unset means all enabled)
+if [ -n "${RUN_AGENT_ENABLED:-}" ]; then
+  _agent_allowed=false
+  IFS=',' read -ra _enabled_agents <<< "$RUN_AGENT_ENABLED"
+  for _ea in "${_enabled_agents[@]}"; do
+    # Trim whitespace
+    _ea="$(echo "$_ea" | tr -d '[:space:]')"
+    if [ "$_ea" = "$AGENT" ]; then
+      _agent_allowed=true
+      break
+    fi
+  done
+  if [ "$_agent_allowed" = false ]; then
+    echo "Agent '$AGENT' is not enabled. Enabled agents: $RUN_AGENT_ENABLED" >&2
+    exit 3
+  fi
+fi
+
 RUN_ID="run_$(date -u +%Y%m%d-%H%M%S)-$$"
 RUN_DIR="$RUNS_DIR/$RUN_ID"
 mkdir -p "$RUN_DIR"
@@ -43,34 +62,28 @@ CWD_FILE="$RUN_DIR/cwd.txt"
 
 cp "$PROMPT_FILE" "$RUN_DIR/prompt.md"
 
-CMDLINE=""
+AGENT_CMD=()
 case "$AGENT" in
   codex)
-    CMDLINE="codex exec --dangerously-bypass-approvals-and-sandbox -C \"$CWD\" - < \"$RUN_DIR/prompt.md\""
-    (
-      cd "$CWD"
-      codex exec --dangerously-bypass-approvals-and-sandbox -C "$CWD" - <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
-    ) &
+    AGENT_CMD=(codex exec --dangerously-bypass-approvals-and-sandbox -C "$CWD" -)
     ;;
   claude)
-    CMDLINE="claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions < \"$RUN_DIR/prompt.md\""
-    (
-      cd "$CWD"
-      claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
-    ) &
+    AGENT_CMD=(claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions)
     ;;
   gemini)
-    CMDLINE="gemini --screen-reader true --approval-mode yolo <\"$RUN_DIR/prompt.md\""
-    (
-      cd "$CWD"
-      gemini --screen-reader true --approval-mode yolo <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
-    ) &
+    AGENT_CMD=(gemini --screen-reader true --approval-mode yolo)
     ;;
   *)
     echo "Unknown agent: $AGENT" >&2
     exit 2
     ;;
 esac
+
+CMDLINE="${AGENT_CMD[*]} < \"$RUN_DIR/prompt.md\""
+(
+  cd "$CWD"
+  "${AGENT_CMD[@]}" <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
+) &
 
 AGENT_PID=$!
 echo "$AGENT_PID" > "$PID_FILE"

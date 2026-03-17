@@ -635,6 +635,192 @@ else
   fail "concurrent runs have duplicate or missing RUN_IDs: '$run_id1' vs '$run_id2'"
 fi
 
+# --- Test 17: RUN_AGENT_ENABLED unset — all agents enabled (default) ---
+echo ""
+echo "--- Test 17: RUN_AGENT_ENABLED unset — all agents enabled ---"
+
+prompt_file="$(create_prompt "Test default enabled")"
+runs_dir="$TEST_TMP/runs17"
+
+# Ensure RUN_AGENT_ENABLED is not set, run claude
+rc=0
+out=$(unset RUN_AGENT_ENABLED; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "claude runs when RUN_AGENT_ENABLED is unset"
+else
+  fail "claude rejected (exit $rc) when RUN_AGENT_ENABLED is unset"
+fi
+
+# Also verify codex works with unset
+rc=0
+out=$(unset RUN_AGENT_ENABLED; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "codex runs when RUN_AGENT_ENABLED is unset"
+else
+  fail "codex rejected (exit $rc) when RUN_AGENT_ENABLED is unset"
+fi
+
+# Also verify gemini works with unset
+rc=0
+out=$(unset RUN_AGENT_ENABLED; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "gemini runs when RUN_AGENT_ENABLED is unset"
+else
+  fail "gemini rejected (exit $rc) when RUN_AGENT_ENABLED is unset"
+fi
+
+# --- Test 18: RUN_AGENT_ENABLED empty — all agents enabled ---
+echo ""
+echo "--- Test 18: RUN_AGENT_ENABLED empty — all agents enabled ---"
+
+prompt_file="$(create_prompt "Test empty enabled")"
+runs_dir="$TEST_TMP/runs18"
+
+rc=0
+out=$(RUN_AGENT_ENABLED="" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "claude runs when RUN_AGENT_ENABLED is empty"
+else
+  fail "claude rejected (exit $rc) when RUN_AGENT_ENABLED is empty"
+fi
+
+rc=0
+out=$(RUN_AGENT_ENABLED="" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "codex runs when RUN_AGENT_ENABLED is empty"
+else
+  fail "codex rejected (exit $rc) when RUN_AGENT_ENABLED is empty"
+fi
+
+# --- Test 19: Disabled agent is rejected with exit 3 ---
+echo ""
+echo "--- Test 19: Disabled agent is rejected with exit 3 ---"
+
+prompt_file="$(create_prompt "Test disabled agent")"
+runs_dir="$TEST_TMP/runs19"
+
+# Enable only codex, try to run claude
+rc=0
+err=""
+out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>"$TEST_TMP/stderr19.txt") || rc=$?
+err=$(cat "$TEST_TMP/stderr19.txt")
+
+if [ "$rc" -eq 3 ]; then
+  pass "exit code is 3 for disabled agent"
+else
+  fail "exit code is $rc, expected 3 for disabled agent"
+fi
+
+if echo "$err" | grep -qi "not enabled"; then
+  pass "stderr mentions 'not enabled'"
+else
+  fail "stderr does not mention 'not enabled': $err"
+fi
+
+if echo "$err" | grep -q "claude"; then
+  pass "stderr mentions the disabled agent name"
+else
+  fail "stderr does not mention the disabled agent name"
+fi
+
+# --- Test 20: Enable only specific agents ---
+echo ""
+echo "--- Test 20: Enable only specific agents ---"
+
+prompt_file="$(create_prompt "Test specific agents")"
+runs_dir="$TEST_TMP/runs20"
+
+# Enable only claude and gemini
+rc=0
+out=$(RUN_AGENT_ENABLED="claude,gemini" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "claude runs when enabled in RUN_AGENT_ENABLED=claude,gemini"
+else
+  fail "claude rejected (exit $rc) when enabled"
+fi
+
+rc=0
+out=$(RUN_AGENT_ENABLED="claude,gemini" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "gemini runs when enabled in RUN_AGENT_ENABLED=claude,gemini"
+else
+  fail "gemini rejected (exit $rc) when enabled"
+fi
+
+# codex should be rejected
+rc=0
+out=$(RUN_AGENT_ENABLED="claude,gemini" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>"$TEST_TMP/stderr20.txt") || rc=$?
+
+if [ "$rc" -eq 3 ]; then
+  pass "codex rejected with exit 3 when not in RUN_AGENT_ENABLED=claude,gemini"
+else
+  fail "codex exit code is $rc, expected 3"
+fi
+
+# --- Test 21: Enable single agent ---
+echo ""
+echo "--- Test 21: Enable single agent ---"
+
+prompt_file="$(create_prompt "Test single agent")"
+runs_dir="$TEST_TMP/runs21"
+
+rc=0
+out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "codex runs when RUN_AGENT_ENABLED=codex"
+else
+  fail "codex rejected (exit $rc) when RUN_AGENT_ENABLED=codex"
+fi
+
+# claude and gemini should be rejected
+rc=0
+out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 3 ]; then
+  pass "claude rejected with exit 3 when RUN_AGENT_ENABLED=codex"
+else
+  fail "claude exit code is $rc, expected 3 when RUN_AGENT_ENABLED=codex"
+fi
+
+rc=0
+out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 3 ]; then
+  pass "gemini rejected with exit 3 when RUN_AGENT_ENABLED=codex"
+else
+  fail "gemini exit code is $rc, expected 3 when RUN_AGENT_ENABLED=codex"
+fi
+
+# --- Test 22: Disabled agent check happens before run dir artifacts ---
+echo ""
+echo "--- Test 22: Disabled agent exits before creating run directory ---"
+
+prompt_file="$(create_prompt "Test no artifacts on disabled")"
+runs_dir="$TEST_TMP/runs22"
+
+rc=0
+out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+# Count directories under runs_dir — there should be none since the agent was rejected
+if [ -d "$runs_dir" ]; then
+  dir_count=$(find "$runs_dir" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d '[:space:]')
+  if [ "$dir_count" -eq 0 ]; then
+    pass "no run directory created when agent is disabled"
+  else
+    fail "run directory created even though agent was disabled (found $dir_count dirs)"
+  fi
+else
+  pass "no run directory created when agent is disabled (runs dir does not exist)"
+fi
+
 # ============================================================
 # Summary
 # ============================================================
