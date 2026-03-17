@@ -7,12 +7,10 @@ services:
       - ./:/src
     environment:
       HUGO_ENVIRONMENT: production
+    entrypoint: /bin/sh
     command:
-      - hugo
-      - --minify
-      - --forceSyncStatic
-      - --baseURL
-      - ${HUGO_BASE_URL:-https://run-agent.jonnyzzz.com/}
+      - -c
+      - "sh /src/scripts/sync-static.sh && hugo --minify --forceSyncStatic --baseURL ${HUGO_BASE_URL:-https://run-agent.jonnyzzz.com/}"
 
   hugo-serve:
     image: hugomods/hugo:exts-0.145.0
