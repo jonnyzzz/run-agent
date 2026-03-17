@@ -5,6 +5,33 @@ description: "Multi-Agent AI Orchestration for Software Development"
 
 **Orchestrate a swarm of AI Agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
 
+## What is run-agent.sh?
+
+`run-agent.sh` enables your agents to start more agent processes for sub-tasks. That plays nice with Recursive Language Models ([RLM.md](https://jonnyzzz.com/RLM.md)), or [THE_PROMPT_v5.md](https://run-agent.jonnyzzz.com/THE_PROMPT_v5.md) swarms, where you use more agents. In simple words, running multiple agents allows each agent to do fewer things at once via delegation, delivering better outcomes, while avoiding the context rot or overflow.
+
+**This is the tool for AI Agents to help consolidate and cope with the work more effectively.**
+
+### Example Prompt
+
+Give this prompt to your AI Agent to get started with multi-agent orchestration:
+
+```
+Here is the task
+
+In order to deliver on the task, you should use https://run-agent.jonnyzzz.com/run-agent.sh script
+to start more tasks. You should follow the https://run-agent.jonnyzzz.com/THE_PROMPT_v5.md and
+other files relative to it as the main process. Your purpose is to orchestrate and delegate
+the work to other run-agent's which you start, you must not do the work yourself.
+So create /loop when necessary to monitor the process. Never stop unless the work is completed.
+
+All your prompts should use the https://run-agent.jonnyzzz.com/MESSAGE-BUS.md as the key
+communication principle.
+
+Make sure you download the files locally and use the full paths to the files below.
+```
+
+---
+
 <div class="product-cards">
 <div class="product-card">
 <div class="product-card-body">
