@@ -1,6 +1,6 @@
 # THE_PROMPT_v5
 
-"start agent", or "start sub agent" in this document always means to start the repo-provided agent runner or command line for the chosen agent.
+"start agent", or "start sub agent" in this document always means to start the repo-provided `run-agent.sh` runner.
 
 ## Purpose
 This document captures a project-independent orchestration workflow that can be applied to any codebase while keeping the MCP Steroid server as the primary tool.
@@ -23,7 +23,7 @@ Available files:
 - [status-loop.sh](https://run-agent.jonnyzzz.com/status-loop.sh) — legacy 60s polling loop
 - [status-loop-5m.sh](https://run-agent.jonnyzzz.com/status-loop-5m.sh) — legacy 5-minute log loop
 
-**Root agent bootstrap:** Download all required files into <PROJECT_ROOT> before starting any sub-agents. Local copies ensure sub-agents can reference orchestration files without needing network access or additional download permissions.
+**Root agent bootstrap:** Download all required files into <PROJECT_ROOT> before starting any run-agents. Local copies ensure run-agents can reference orchestration files without needing network access or additional download permissions.
 
 ## Project Variables
 Use these placeholders to avoid hardcoded paths:
@@ -69,7 +69,7 @@ When creating a <RUNS_DIR>/run_XXX/prompt.md, copy the relevant role file verbat
 All agent runs must use a unified runner script when available (for example, ./run-agent.sh — download from https://run-agent.jonnyzzz.com/run-agent.sh if not present locally). The runner must create a new run folder and enforce consistent file names. If no runner exists, manually create the run folder and required artifacts, and log the deviation to <MESSAGE_BUS>. If you are operating from a centralized template repo, copy the runner/monitor scripts into the project root or set RUNS_DIR/MESSAGE_BUS explicitly.
 
 Required steps for every agent run:
-1. Prepare a prompt file (any path). The orchestrator prepares full prompt text for each sub-agent and uses absolute paths for all .md references.
+1. Prepare a prompt file (any path). The orchestrator prepares full prompt text for each run-agent and uses absolute paths for all .md references.
 2. Run the unified runner: ./run-agent.sh [agent] <cwd> [prompt_file] (or the equivalent in your repo).
 3. The runner creates a new run folder under <RUNS_DIR>/ with id format run_YYYYMMDD-HHMMSS-<pid>.
 4. The runner copies the prompt into <RUNS_DIR>/<run_id>/prompt.md.
@@ -111,7 +111,7 @@ If the monitor has configurable defaults (poll interval, summary interval/lines)
 Each bullet below is a distinct agent stage. The root agent selects the agent type (Codex/Claude/Gemini) at random unless statistics strongly indicate a better choice. Any failure must be logged to <MESSAGE_BUS> (and <ISSUES_FILE> if blocking), and the flow restarts from the beginning (or from a root-selected stage if appropriate). Parallel execution is allowed where it does not violate dependencies.
 
 1. Stage 0: Cleanup and Bootstrap
-   Look at related project files like MESSAGE-BUS.md, AGENTS.md, Instructions.md, FACTS.md, ISSUES.md. Summarize or append new entries; do not edit MESSAGE-BUS history. Ensure the project root can access the required orchestration files (THE_PROMPT_v5.md, role prompts, run-agent.sh, monitoring scripts). If files are missing, download them from https://run-agent.jonnyzzz.com/ (see the Distribution section above for the full list). Make local copies of all orchestration files in <PROJECT_ROOT> so that sub-agents can reference them without needing network access or additional download permissions. If the project shares a centralized orchestration repo, reference the root files directly. Adapt paths and review the final documents.
+   Look at related project files like MESSAGE-BUS.md, AGENTS.md, Instructions.md, FACTS.md, ISSUES.md. Summarize or append new entries; do not edit MESSAGE-BUS history. Ensure the project root can access the required orchestration files (THE_PROMPT_v5.md, role prompts, run-agent.sh, monitoring scripts). If files are missing, download them from https://run-agent.jonnyzzz.com/ (see the Distribution section above for the full list). Make local copies of all orchestration files in <PROJECT_ROOT> so that run-agents can reference them without needing network access or additional download permissions. If the project shares a centralized orchestration repo, reference the root files directly. Adapt paths and review the final documents.
 
 2. Stage 1: Read local docs
    Read AGENTS.md and all relevant .md files using absolute paths.
