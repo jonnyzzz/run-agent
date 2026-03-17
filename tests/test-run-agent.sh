@@ -821,6 +821,45 @@ else
   pass "no run directory created when agent is disabled (runs dir does not exist)"
 fi
 
+# --- Test 23: Help flags ---
+echo ""
+echo "--- Test 23: Help flags (-h, --help, help) ---"
+
+for flag in -h --help help; do
+  rc=0
+  out=$("$ws/run-agent.sh" "$flag" 2>/dev/null) || rc=$?
+
+  if [ "$rc" -eq 0 ]; then
+    pass "'$flag' exits 0"
+  else
+    fail "'$flag' exits $rc, expected 0"
+  fi
+
+  if echo "$out" | grep -q "Usage:"; then
+    pass "'$flag' output contains Usage:"
+  else
+    fail "'$flag' output missing Usage:"
+  fi
+
+  if echo "$out" | grep -q "claude"; then
+    pass "'$flag' output lists claude agent"
+  else
+    fail "'$flag' output missing claude agent"
+  fi
+
+  if echo "$out" | grep -q "RUNS_DIR"; then
+    pass "'$flag' output mentions RUNS_DIR"
+  else
+    fail "'$flag' output missing RUNS_DIR"
+  fi
+
+  if echo "$out" | grep -q "RUN_AGENT_ENABLED"; then
+    pass "'$flag' output mentions RUN_AGENT_ENABLED"
+  else
+    fail "'$flag' output missing RUN_AGENT_ENABLED"
+  fi
+done
+
 # ============================================================
 # Summary
 # ============================================================
