@@ -62,22 +62,21 @@ CWD_FILE="$RUN_DIR/cwd.txt"
 
 cp "$PROMPT_FILE" "$RUN_DIR/prompt.md"
 
-AGENT_CMD=()
-case "$AGENT" in
-  codex)
-    AGENT_CMD=(codex exec --dangerously-bypass-approvals-and-sandbox -C "$CWD" -)
-    ;;
-  claude)
-    AGENT_CMD=(claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions)
-    ;;
-  gemini)
-    AGENT_CMD=(gemini --screen-reader true --approval-mode yolo)
-    ;;
-  *)
-    echo "Unknown agent: $AGENT" >&2
-    exit 2
-    ;;
-esac
+# Agent CLI definitions — one variable per agent, easy to add new ones
+AGENT_CLI_codex="codex exec --dangerously-bypass-approvals-and-sandbox -C $CWD -"
+AGENT_CLI_claude="claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions"
+AGENT_CLI_gemini="gemini --screen-reader true --approval-mode yolo"
+
+# Look up the CLI for the requested agent
+_cli_var="AGENT_CLI_${AGENT}"
+if [ -z "${!_cli_var:-}" ]; then
+  echo "Unknown agent: $AGENT" >&2
+  exit 2
+fi
+
+# Split into array for execution (word-splitting is intentional here)
+# shellcheck disable=SC2206
+AGENT_CMD=(${!_cli_var})
 
 CMDLINE="${AGENT_CMD[*]} < \"$RUN_DIR/prompt.md\""
 (
