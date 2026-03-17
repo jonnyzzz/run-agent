@@ -580,22 +580,22 @@ else
   fail "cwd.txt does not record correct CWD"
 fi
 
-# --- Test 15: MESSAGE_BUS env var is exported ---
+# --- Test 15: Exported env vars verified in source ---
 echo ""
-echo "--- Test 15: MESSAGE_BUS env var is set ---"
+echo "--- Test 15: Script exports key env vars ---"
 
-# We verify by checking that the script sets/exports MESSAGE_BUS
-if grep -q 'MESSAGE_BUS=' "$RUN_AGENT_SH" && grep -q 'export MESSAGE_BUS' "$RUN_AGENT_SH"; then
-  pass "run-agent.sh sets and exports MESSAGE_BUS"
-else
-  fail "run-agent.sh does not set/export MESSAGE_BUS"
-fi
+for var in RUNS_DIR MESSAGE_BUS RUN_ID PROMPT; do
+  if grep -q "export $var" "$RUN_AGENT_SH"; then
+    pass "run-agent.sh exports $var"
+  else
+    fail "run-agent.sh does not export $var"
+  fi
+done
 
-# Also verify RUNS_DIR is exported
-if grep -q 'export RUNS_DIR' "$RUN_AGENT_SH"; then
-  pass "run-agent.sh exports RUNS_DIR"
+if grep -q 'unset CLAUDECODE' "$RUN_AGENT_SH"; then
+  pass "run-agent.sh unsets CLAUDECODE"
 else
-  fail "run-agent.sh does not export RUNS_DIR"
+  fail "run-agent.sh does not unset CLAUDECODE"
 fi
 
 # --- Test 16: Multiple concurrent runs get unique IDs ---
@@ -635,190 +635,161 @@ else
   fail "concurrent runs have duplicate or missing RUN_IDs: '$run_id1' vs '$run_id2'"
 fi
 
-# --- Test 17: RUN_AGENT_ENABLED unset — all agents enabled (default) ---
+# --- Test 17: Default agent is "any" (random selection) ---
 echo ""
-echo "--- Test 17: RUN_AGENT_ENABLED unset — all agents enabled ---"
+echo "--- Test 17: Default agent is 'any' (random selection) ---"
 
-prompt_file="$(create_prompt "Test default enabled")"
+prompt_file="$(create_prompt "Test any agent")"
 runs_dir="$TEST_TMP/runs17"
 
-# Ensure RUN_AGENT_ENABLED is not set, run claude
 rc=0
-out=$(unset RUN_AGENT_ENABLED; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+out=$(PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" any "$ws" "$prompt_file" 2>/dev/null) || rc=$?
 
 if [ "$rc" -eq 0 ]; then
-  pass "claude runs when RUN_AGENT_ENABLED is unset"
+  pass "'any' agent runs successfully"
 else
-  fail "claude rejected (exit $rc) when RUN_AGENT_ENABLED is unset"
+  fail "'any' agent exits $rc, expected 0"
 fi
 
-# Also verify codex works with unset
-rc=0
-out=$(unset RUN_AGENT_ENABLED; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-
-if [ "$rc" -eq 0 ]; then
-  pass "codex runs when RUN_AGENT_ENABLED is unset"
+if echo "$out" | grep -q "^AGENT_SELECTED="; then
+  selected=$(echo "$out" | grep "^AGENT_SELECTED=" | head -1 | cut -d= -f2)
+  pass "'any' selected agent: $selected"
 else
-  fail "codex rejected (exit $rc) when RUN_AGENT_ENABLED is unset"
+  fail "'any' did not output AGENT_SELECTED="
 fi
 
-# Also verify gemini works with unset
-rc=0
-out=$(unset RUN_AGENT_ENABLED; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-
-if [ "$rc" -eq 0 ]; then
-  pass "gemini runs when RUN_AGENT_ENABLED is unset"
-else
-  fail "gemini rejected (exit $rc) when RUN_AGENT_ENABLED is unset"
-fi
-
-# --- Test 18: RUN_AGENT_ENABLED empty — all agents enabled ---
+# --- Test 18: 'any' picks from available agents only ---
 echo ""
-echo "--- Test 18: RUN_AGENT_ENABLED empty — all agents enabled ---"
+echo "--- Test 18: 'any' picks from restricted RUN_AGENT_AGENTS ---"
 
-prompt_file="$(create_prompt "Test empty enabled")"
+prompt_file="$(create_prompt "Test any restricted")"
 runs_dir="$TEST_TMP/runs18"
 
-rc=0
-out=$(RUN_AGENT_ENABLED="" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+# Run 'any' 10 times with only claude available — must always pick claude
+all_claude=true
+for i in $(seq 1 10); do
+  rc=0
+  out=$(RUN_AGENT_AGENTS="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" any "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+  selected=$(echo "$out" | grep "^AGENT_SELECTED=" | head -1 | cut -d= -f2)
+  if [ "$selected" != "claude" ]; then
+    all_claude=false
+    break
+  fi
+done
 
-if [ "$rc" -eq 0 ]; then
-  pass "claude runs when RUN_AGENT_ENABLED is empty"
+if [ "$all_claude" = true ]; then
+  pass "'any' with RUN_AGENT_AGENTS=claude always selects claude"
 else
-  fail "claude rejected (exit $rc) when RUN_AGENT_ENABLED is empty"
+  fail "'any' selected '$selected' instead of claude"
 fi
 
-rc=0
-out=$(RUN_AGENT_ENABLED="" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-
-if [ "$rc" -eq 0 ]; then
-  pass "codex runs when RUN_AGENT_ENABLED is empty"
-else
-  fail "codex rejected (exit $rc) when RUN_AGENT_ENABLED is empty"
-fi
-
-# --- Test 19: Disabled agent is rejected with exit 3 ---
+# --- Test 19: CLAUDECODE env var is unset before agent runs ---
 echo ""
-echo "--- Test 19: Disabled agent is rejected with exit 3 ---"
+echo "--- Test 19: CLAUDECODE is unset in agent environment ---"
 
-prompt_file="$(create_prompt "Test disabled agent")"
+claudecode_bin="$TEST_TMP/claudecode-bin"
+mkdir -p "$claudecode_bin"
+cat > "$claudecode_bin/claude" <<'MOCK'
+#!/bin/bash
+if [ -z "${CLAUDECODE:-}" ]; then
+  echo "CLAUDECODE_UNSET"
+else
+  echo "CLAUDECODE_LEAKED=$CLAUDECODE"
+fi
+exit 0
+MOCK
+chmod +x "$claudecode_bin/claude"
+
+prompt_file="$(create_prompt "Test CLAUDECODE")"
 runs_dir="$TEST_TMP/runs19"
 
-# Enable only codex, try to run claude
 rc=0
-err=""
-out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>"$TEST_TMP/stderr19.txt") || rc=$?
-err=$(cat "$TEST_TMP/stderr19.txt")
+out=$(CLAUDECODE="should_be_removed" PATH="$claudecode_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
 
-if [ "$rc" -eq 3 ]; then
-  pass "exit code is 3 for disabled agent"
+if grep -q "CLAUDECODE_UNSET" "$run_dir/agent-stdout.txt"; then
+  pass "CLAUDECODE is unset in agent environment"
 else
-  fail "exit code is $rc, expected 3 for disabled agent"
+  fail "CLAUDECODE leaked to agent"
 fi
 
-if echo "$err" | grep -qi "not enabled"; then
-  pass "stderr mentions 'not enabled'"
-else
-  fail "stderr does not mention 'not enabled': $err"
-fi
-
-if echo "$err" | grep -q "claude"; then
-  pass "stderr mentions the disabled agent name"
-else
-  fail "stderr does not mention the disabled agent name"
-fi
-
-# --- Test 20: Enable only specific agents ---
+# --- Test 20: RUN_ID is exported to agent ---
 echo ""
-echo "--- Test 20: Enable only specific agents ---"
+echo "--- Test 20: RUN_ID exported to agent ---"
 
-prompt_file="$(create_prompt "Test specific agents")"
+runid_bin="$TEST_TMP/runid-bin"
+mkdir -p "$runid_bin"
+cat > "$runid_bin/claude" <<'MOCK'
+#!/bin/bash
+echo "RUN_ID=$RUN_ID"
+echo "PROMPT=$PROMPT"
+exit 0
+MOCK
+chmod +x "$runid_bin/claude"
+
+prompt_file="$(create_prompt "Test exports")"
 runs_dir="$TEST_TMP/runs20"
 
-# Enable only claude and gemini
 rc=0
-out=$(RUN_AGENT_ENABLED="claude,gemini" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+out=$(PATH="$runid_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
 
-if [ "$rc" -eq 0 ]; then
-  pass "claude runs when enabled in RUN_AGENT_ENABLED=claude,gemini"
+if grep -q "^RUN_ID=$run_id" "$run_dir/agent-stdout.txt"; then
+  pass "RUN_ID exported to agent with correct value"
 else
-  fail "claude rejected (exit $rc) when enabled"
+  fail "RUN_ID not exported or wrong value"
 fi
 
-rc=0
-out=$(RUN_AGENT_ENABLED="claude,gemini" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-
-if [ "$rc" -eq 0 ]; then
-  pass "gemini runs when enabled in RUN_AGENT_ENABLED=claude,gemini"
+if grep -q "^PROMPT=$run_dir/prompt.md" "$run_dir/agent-stdout.txt"; then
+  pass "PROMPT exported to agent with correct path"
 else
-  fail "gemini rejected (exit $rc) when enabled"
+  fail "PROMPT not exported or wrong value"
 fi
 
-# codex should be rejected
-rc=0
-out=$(RUN_AGENT_ENABLED="claude,gemini" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>"$TEST_TMP/stderr20.txt") || rc=$?
-
-if [ "$rc" -eq 3 ]; then
-  pass "codex rejected with exit 3 when not in RUN_AGENT_ENABLED=claude,gemini"
-else
-  fail "codex exit code is $rc, expected 3"
-fi
-
-# --- Test 21: Enable single agent ---
+# --- Test 21: MESSAGE_BUS is inside RUNS_DIR ---
 echo ""
-echo "--- Test 21: Enable single agent ---"
+echo "--- Test 21: MESSAGE_BUS is inside RUNS_DIR ---"
 
-prompt_file="$(create_prompt "Test single agent")"
+msgbus_bin="$TEST_TMP/msgbus-bin"
+mkdir -p "$msgbus_bin"
+cat > "$msgbus_bin/claude" <<'MOCK'
+#!/bin/bash
+echo "MESSAGE_BUS=$MESSAGE_BUS"
+exit 0
+MOCK
+chmod +x "$msgbus_bin/claude"
+
+prompt_file="$(create_prompt "Test MESSAGE_BUS location")"
 runs_dir="$TEST_TMP/runs21"
 
 rc=0
-out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+out=$(PATH="$msgbus_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
 
-if [ "$rc" -eq 0 ]; then
-  pass "codex runs when RUN_AGENT_ENABLED=codex"
+if grep -q "^MESSAGE_BUS=$runs_dir/MESSAGE-BUS.md" "$run_dir/agent-stdout.txt"; then
+  pass "MESSAGE_BUS points to RUNS_DIR/MESSAGE-BUS.md"
 else
-  fail "codex rejected (exit $rc) when RUN_AGENT_ENABLED=codex"
+  fail "MESSAGE_BUS not in RUNS_DIR"
 fi
 
-# claude and gemini should be rejected
-rc=0
-out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-
-if [ "$rc" -eq 3 ]; then
-  pass "claude rejected with exit 3 when RUN_AGENT_ENABLED=codex"
-else
-  fail "claude exit code is $rc, expected 3 when RUN_AGENT_ENABLED=codex"
-fi
-
-rc=0
-out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-
-if [ "$rc" -eq 3 ]; then
-  pass "gemini rejected with exit 3 when RUN_AGENT_ENABLED=codex"
-else
-  fail "gemini exit code is $rc, expected 3 when RUN_AGENT_ENABLED=codex"
-fi
-
-# --- Test 22: Disabled agent check happens before run dir artifacts ---
+# --- Test 22: No arg defaults to 'any' ---
 echo ""
-echo "--- Test 22: Disabled agent exits before creating run directory ---"
+echo "--- Test 22: No agent arg defaults to 'any' (random) ---"
 
-prompt_file="$(create_prompt "Test no artifacts on disabled")"
+prompt_file="$(create_prompt "Test default any")"
 runs_dir="$TEST_TMP/runs22"
 
+# Call without agent arg — defaults to 'any', which picks random
 rc=0
-out=$(RUN_AGENT_ENABLED="codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+out=$(PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" any "$ws" "$prompt_file" 2>/dev/null) || rc=$?
 
-# Count directories under runs_dir — there should be none since the agent was rejected
-if [ -d "$runs_dir" ]; then
-  dir_count=$(find "$runs_dir" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d '[:space:]')
-  if [ "$dir_count" -eq 0 ]; then
-    pass "no run directory created when agent is disabled"
-  else
-    fail "run directory created even though agent was disabled (found $dir_count dirs)"
-  fi
+if [ "$rc" -eq 0 ]; then
+  pass "default 'any' runs successfully"
 else
-  pass "no run directory created when agent is disabled (runs dir does not exist)"
+  fail "default 'any' exits $rc"
 fi
 
 # --- Test 23: Help flags ---
@@ -853,10 +824,10 @@ for flag in -h --help help; do
     fail "'$flag' output missing RUNS_DIR"
   fi
 
-  if echo "$out" | grep -q "RUN_AGENT_ENABLED"; then
-    pass "'$flag' output mentions RUN_AGENT_ENABLED"
+  if echo "$out" | grep -q "RUN_AGENT_AGENTS"; then
+    pass "'$flag' output mentions RUN_AGENT_AGENTS"
   else
-    fail "'$flag' output missing RUN_AGENT_ENABLED"
+    fail "'$flag' output missing RUN_AGENT_AGENTS"
   fi
 done
 
@@ -1075,7 +1046,7 @@ prompt_file="$(create_prompt "env test")"
 runs_dir="$TEST_TMP/runs30"
 
 rc=0
-out=$(PATH="$env_bin:$PATH" RUNS_DIR="$runs_dir" MESSAGE_BUS="$TEST_TMP/bus.md" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+out=$(PATH="$env_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
 run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
 run_dir="$runs_dir/$run_id"
 
@@ -1085,45 +1056,13 @@ else
   fail "RUNS_DIR NOT exported to agent process"
 fi
 
-if grep -q "MESSAGE_BUS=$TEST_TMP/bus.md" "$run_dir/agent-stdout.txt"; then
+if grep -q "MESSAGE_BUS=$runs_dir/MESSAGE-BUS.md" "$run_dir/agent-stdout.txt"; then
   pass "MESSAGE_BUS exported to agent process"
 else
   fail "MESSAGE_BUS NOT exported to agent process"
 fi
 
-# --- Test 31: RUN_AGENT_ENABLED edge cases ---
-echo ""
-echo "--- Test 31: RUN_AGENT_ENABLED edge cases ---"
-
-prompt_file="$(create_prompt "edge cases")"
-runs_dir="$TEST_TMP/runs31"
-
-# Trailing comma: "claude," should still enable claude
-rc=0
-out=$(RUN_AGENT_ENABLED="claude," PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-if [ "$rc" -eq 0 ]; then
-  pass "trailing comma: claude still enabled"
-else
-  fail "trailing comma: claude rejected (exit $rc)"
-fi
-
-# Whitespace around agent names: " claude " should work
-rc=0
-out=$(RUN_AGENT_ENABLED=" claude , codex " PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-if [ "$rc" -eq 0 ]; then
-  pass "whitespace in RUN_AGENT_ENABLED: claude enabled"
-else
-  fail "whitespace in RUN_AGENT_ENABLED: claude rejected (exit $rc)"
-fi
-
-# Substring non-match: "claude2" should NOT enable "claude"
-rc=0
-out=$(RUN_AGENT_ENABLED="claude2" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-if [ "$rc" -eq 3 ]; then
-  pass "substring non-match: claude2 does not enable claude"
-else
-  fail "substring non-match: claude unexpectedly allowed (exit $rc)"
-fi
+# (Test 31 removed — RUN_AGENT_ENABLED dropped)
 
 # --- Test 32: CWD is normalized to absolute path ---
 echo ""
@@ -1279,39 +1218,7 @@ else
   pass "help hides gemini when RUN_AGENT_AGENTS=claude"
 fi
 
-# --- Test 38: RUN_AGENT_AGENTS interacts with RUN_AGENT_ENABLED ---
-echo ""
-echo "--- Test 38: RUN_AGENT_AGENTS + RUN_AGENT_ENABLED interaction ---"
-
-prompt_file="$(create_prompt "agents+enabled")"
-runs_dir="$TEST_TMP/runs38"
-
-# AGENTS=claude,codex, ENABLED=claude — codex is known but not enabled
-rc=0
-out=$(RUN_AGENT_AGENTS="claude,codex" RUN_AGENT_ENABLED="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-if [ "$rc" -eq 3 ]; then
-  pass "codex: known (AGENTS) but disabled (ENABLED) → exit 3"
-else
-  fail "codex exit code $rc, expected 3"
-fi
-
-# claude should work (both known and enabled)
-rc=0
-out=$(RUN_AGENT_AGENTS="claude,codex" RUN_AGENT_ENABLED="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-if [ "$rc" -eq 0 ]; then
-  pass "claude: known (AGENTS) and enabled (ENABLED) → runs"
-else
-  fail "claude rejected (exit $rc)"
-fi
-
-# gemini should fail as unknown (not in AGENTS), not disabled
-rc=0
-out=$(RUN_AGENT_AGENTS="claude,codex" RUN_AGENT_ENABLED="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
-if [ "$rc" -eq 2 ]; then
-  pass "gemini: not in AGENTS → exit 2 (unknown, not disabled)"
-else
-  fail "gemini exit code $rc, expected 2"
-fi
+# (Test 38 removed — RUN_AGENT_ENABLED dropped)
 
 # ============================================================
 # Summary

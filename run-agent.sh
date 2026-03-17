@@ -12,7 +12,7 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 RUNS_DIR="${RUNS_DIR:-$BASE_DIR/runs}"
-MESSAGE_BUS="${MESSAGE_BUS:-$BASE_DIR/MESSAGE-BUS.md}"
+MESSAGE_BUS="$RUNS_DIR/MESSAGE-BUS.md"
 export RUNS_DIR
 export MESSAGE_BUS
 
@@ -22,7 +22,6 @@ BUILTIN_AGENTS="codex claude gemini"
 # RUN_AGENT_AGENTS overrides which agents are available (must be a subset of BUILTIN_AGENTS).
 # Default: all built-in agents. Set to e.g. "claude,codex" to hide gemini from help/validation.
 if [ -n "${RUN_AGENT_AGENTS:-}" ]; then
-  # Parse comma-separated, validate each is a builtin
   KNOWN_AGENTS=""
   IFS=',' read -ra _req_agents <<< "$RUN_AGENT_AGENTS"
   for _ra in "${_req_agents[@]}"; do
@@ -56,21 +55,25 @@ run-agent.sh — Unified AI Agent runner
 Usage: ./run-agent.sh <agent> <cwd> <prompt_file>
 
 Arguments:
-  agent        Agent to run: ${KNOWN_AGENTS// /,}
+  agent        Agent to run: any,${KNOWN_AGENTS// /,}
+               Use "any" to pick a random agent from the available list.
   cwd          Working directory for the agent (default: script directory)
   prompt_file  Path to the prompt file (default: ./prompt.md)
 
-Environment variables:
-  RUNS_DIR            Override the runs output directory (default: ./runs)
-  MESSAGE_BUS         Override the message bus file (default: ./MESSAGE-BUS.md)
+Configuration (env variables):
+  RUNS_DIR            Runs output directory (default: ./runs)
   RUN_AGENT_AGENTS    Comma-separated list of available agents (default: all built-in)
-  RUN_AGENT_ENABLED   Comma-separated list of enabled agents (default: all available)
+
+Exported to agent process:
+  RUNS_DIR            Absolute path to the runs directory
+  MESSAGE_BUS         Absolute path to MESSAGE-BUS.md (inside RUNS_DIR)
+  RUN_ID              Unique run identifier for this invocation
+  PROMPT              Absolute path to the copied prompt file
 
 Exit codes:
   0  Agent completed successfully
   1  Prompt file not found
   2  Unknown agent type
-  3  Agent not enabled (via RUN_AGENT_ENABLED)
 
 Output:
   Each run creates a directory under RUNS_DIR with:
@@ -94,9 +97,17 @@ case "${1:-}" in
     ;;
 esac
 
-AGENT="${1:-codex}"
+AGENT="${1:-any}"
 CWD="${2:-$BASE_DIR}"
 PROMPT_FILE="${3:-$BASE_DIR/prompt.md}"
+
+# "any" picks a random agent from KNOWN_AGENTS
+if [ "$AGENT" = "any" ]; then
+  # shellcheck disable=SC2206
+  _agents_arr=($KNOWN_AGENTS)
+  AGENT="${_agents_arr[$((RANDOM % ${#_agents_arr[@]}))]}"
+  echo "AGENT_SELECTED=$AGENT"
+fi
 
 # Validate agent name: must be alphanumeric/underscore and in KNOWN_AGENTS
 if [[ ! "$AGENT" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
@@ -128,26 +139,11 @@ fi
 # Normalize CWD to absolute path
 CWD="$(cd "$CWD" && pwd)"
 
-# Check if the requested agent is enabled via RUN_AGENT_ENABLED
-# Default: all agents enabled (empty or unset means all enabled)
-if [ -n "${RUN_AGENT_ENABLED:-}" ]; then
-  _agent_allowed=false
-  IFS=',' read -ra _enabled_agents <<< "$RUN_AGENT_ENABLED"
-  for _ea in "${_enabled_agents[@]}"; do
-    _ea="$(echo "$_ea" | tr -d '[:space:]')"
-    if [ "$_ea" = "$AGENT" ]; then
-      _agent_allowed=true
-      break
-    fi
-  done
-  if [ "$_agent_allowed" = false ]; then
-    echo "Agent '$AGENT' is not enabled. Enabled agents: $RUN_AGENT_ENABLED" >&2
-    exit 3
-  fi
-fi
+# Sanitize environment: remove CLAUDECODE to avoid leaking nested runtime context
+unset CLAUDECODE
 
 # Build agent command array — properly quoted, no eval needed.
-# To add a new agent, add a case entry here and update KNOWN_AGENTS above.
+# To add a new agent, add a case entry here and update BUILTIN_AGENTS above.
 AGENT_CMD=()
 case "$AGENT" in
   codex)
@@ -171,6 +167,11 @@ RUN_DIR="$RUNS_DIR/$RUN_ID"
 mkdir -p "$RUN_DIR"
 cp "$BASE_DIR/run-agent.sh" "$RUN_DIR/run-agent.sh"
 
+# Export variables available to the agent process
+PROMPT="$RUN_DIR/prompt.md"
+export RUN_ID
+export PROMPT
+
 echo "RUN_ID=$RUN_ID"
 echo "RUN_DIR=$RUN_DIR"
 
@@ -180,12 +181,12 @@ STDERR_FILE="$RUN_DIR/agent-stderr.txt"
 PID_FILE="$RUN_DIR/pid.txt"
 CWD_FILE="$RUN_DIR/cwd.txt"
 
-cp "$PROMPT_FILE" "$RUN_DIR/prompt.md"
+cp "$PROMPT_FILE" "$PROMPT"
 
-CMDLINE="${AGENT_CMD[*]} < \"$RUN_DIR/prompt.md\""
+CMDLINE="${AGENT_CMD[*]} < \"$PROMPT\""
 (
   cd "$CWD"
-  "${AGENT_CMD[@]}" <"$RUN_DIR/prompt.md" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
+  "${AGENT_CMD[@]}" <"$PROMPT" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
 ) &
 
 AGENT_PID=$!
@@ -197,7 +198,7 @@ RUN_ID=$RUN_ID
 CWD=$CWD
 AGENT=$AGENT
 CMD=$CMDLINE
-PROMPT=$RUN_DIR/prompt.md
+PROMPT=$PROMPT
 STDOUT=$STDOUT_FILE
 STDERR=$STDERR_FILE
 PID=$AGENT_PID
