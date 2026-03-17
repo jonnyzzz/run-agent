@@ -1154,6 +1154,165 @@ else
   fail "CWD not normalized: $cwd_val"
 fi
 
+# --- Test 33: RUN_AGENT_AGENTS unset — all built-in agents available ---
+echo ""
+echo "--- Test 33: RUN_AGENT_AGENTS unset — all agents available ---"
+
+prompt_file="$(create_prompt "agents unset")"
+runs_dir="$TEST_TMP/runs33"
+
+for agent in claude codex gemini; do
+  rc=0
+  out=$(unset RUN_AGENT_AGENTS; PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" "$agent" "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    pass "$agent available when RUN_AGENT_AGENTS unset"
+  else
+    fail "$agent rejected (exit $rc) when RUN_AGENT_AGENTS unset"
+  fi
+done
+
+# --- Test 34: RUN_AGENT_AGENTS restricts available agents ---
+echo ""
+echo "--- Test 34: RUN_AGENT_AGENTS restricts available agents ---"
+
+prompt_file="$(create_prompt "agents restricted")"
+runs_dir="$TEST_TMP/runs34"
+
+# Only claude available
+rc=0
+out=$(RUN_AGENT_AGENTS="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "claude runs when RUN_AGENT_AGENTS=claude"
+else
+  fail "claude rejected (exit $rc) when RUN_AGENT_AGENTS=claude"
+fi
+
+# codex should be rejected as unknown (not in KNOWN_AGENTS)
+rc=0
+out=$(RUN_AGENT_AGENTS="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>"$TEST_TMP/stderr34.txt") || rc=$?
+if [ "$rc" -eq 2 ]; then
+  pass "codex rejected with exit 2 when RUN_AGENT_AGENTS=claude"
+else
+  fail "codex exit code $rc, expected 2 when RUN_AGENT_AGENTS=claude"
+fi
+
+# gemini should also be rejected
+rc=0
+out=$(RUN_AGENT_AGENTS="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 2 ]; then
+  pass "gemini rejected with exit 2 when RUN_AGENT_AGENTS=claude"
+else
+  fail "gemini exit code $rc, expected 2 when RUN_AGENT_AGENTS=claude"
+fi
+
+# --- Test 35: RUN_AGENT_AGENTS with multiple agents ---
+echo ""
+echo "--- Test 35: RUN_AGENT_AGENTS with multiple agents ---"
+
+prompt_file="$(create_prompt "multi agents")"
+runs_dir="$TEST_TMP/runs35"
+
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "claude runs when RUN_AGENT_AGENTS=claude,codex"
+else
+  fail "claude rejected (exit $rc)"
+fi
+
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "codex runs when RUN_AGENT_AGENTS=claude,codex"
+else
+  fail "codex rejected (exit $rc)"
+fi
+
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,codex" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 2 ]; then
+  pass "gemini rejected when RUN_AGENT_AGENTS=claude,codex"
+else
+  fail "gemini exit code $rc, expected 2"
+fi
+
+# --- Test 36: RUN_AGENT_AGENTS rejects unknown agent names ---
+echo ""
+echo "--- Test 36: RUN_AGENT_AGENTS rejects unknown agent names ---"
+
+prompt_file="$(create_prompt "unknown agent in list")"
+runs_dir="$TEST_TMP/runs36"
+
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,fakename" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>"$TEST_TMP/stderr36.txt") || rc=$?
+err=$(cat "$TEST_TMP/stderr36.txt")
+
+if [ "$rc" -eq 2 ]; then
+  pass "exits 2 when RUN_AGENT_AGENTS contains unknown 'fakename'"
+else
+  fail "exit code $rc, expected 2 for unknown agent in RUN_AGENT_AGENTS"
+fi
+
+if echo "$err" | grep -q "fakename"; then
+  pass "stderr mentions the unknown agent name"
+else
+  fail "stderr does not mention 'fakename'"
+fi
+
+# --- Test 37: RUN_AGENT_AGENTS shown in help output ---
+echo ""
+echo "--- Test 37: RUN_AGENT_AGENTS shown in help ---"
+
+rc=0
+out=$(RUN_AGENT_AGENTS="claude" "$ws/run-agent.sh" --help 2>/dev/null) || rc=$?
+
+if echo "$out" | grep -q "claude"; then
+  pass "help shows claude when RUN_AGENT_AGENTS=claude"
+else
+  fail "help does not show claude"
+fi
+
+# gemini should NOT appear in help when restricted
+if echo "$out" | grep -q "gemini"; then
+  fail "help shows gemini when RUN_AGENT_AGENTS=claude (should be hidden)"
+else
+  pass "help hides gemini when RUN_AGENT_AGENTS=claude"
+fi
+
+# --- Test 38: RUN_AGENT_AGENTS interacts with RUN_AGENT_ENABLED ---
+echo ""
+echo "--- Test 38: RUN_AGENT_AGENTS + RUN_AGENT_ENABLED interaction ---"
+
+prompt_file="$(create_prompt "agents+enabled")"
+runs_dir="$TEST_TMP/runs38"
+
+# AGENTS=claude,codex, ENABLED=claude — codex is known but not enabled
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,codex" RUN_AGENT_ENABLED="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 3 ]; then
+  pass "codex: known (AGENTS) but disabled (ENABLED) → exit 3"
+else
+  fail "codex exit code $rc, expected 3"
+fi
+
+# claude should work (both known and enabled)
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,codex" RUN_AGENT_ENABLED="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "claude: known (AGENTS) and enabled (ENABLED) → runs"
+else
+  fail "claude rejected (exit $rc)"
+fi
+
+# gemini should fail as unknown (not in AGENTS), not disabled
+rc=0
+out=$(RUN_AGENT_AGENTS="claude,codex" RUN_AGENT_ENABLED="claude" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 2 ]; then
+  pass "gemini: not in AGENTS → exit 2 (unknown, not disabled)"
+else
+  fail "gemini exit code $rc, expected 2"
+fi
+
 # ============================================================
 # Summary
 # ============================================================

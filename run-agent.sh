@@ -16,8 +16,38 @@ MESSAGE_BUS="${MESSAGE_BUS:-$BASE_DIR/MESSAGE-BUS.md}"
 export RUNS_DIR
 export MESSAGE_BUS
 
-# Known agent names (used for help and validation)
-KNOWN_AGENTS="codex claude gemini"
+# All agents that have a case entry below (source of truth for invocation)
+BUILTIN_AGENTS="codex claude gemini"
+
+# RUN_AGENT_AGENTS overrides which agents are available (must be a subset of BUILTIN_AGENTS).
+# Default: all built-in agents. Set to e.g. "claude,codex" to hide gemini from help/validation.
+if [ -n "${RUN_AGENT_AGENTS:-}" ]; then
+  # Parse comma-separated, validate each is a builtin
+  KNOWN_AGENTS=""
+  IFS=',' read -ra _req_agents <<< "$RUN_AGENT_AGENTS"
+  for _ra in "${_req_agents[@]}"; do
+    _ra="$(echo "$_ra" | tr -d '[:space:]')"
+    [ -z "$_ra" ] && continue
+    _is_builtin=false
+    for _ba in $BUILTIN_AGENTS; do
+      if [ "$_ra" = "$_ba" ]; then
+        _is_builtin=true
+        break
+      fi
+    done
+    if [ "$_is_builtin" = false ]; then
+      echo "RUN_AGENT_AGENTS: unknown agent '$_ra'. Built-in agents: ${BUILTIN_AGENTS// /,}" >&2
+      exit 2
+    fi
+    KNOWN_AGENTS="${KNOWN_AGENTS:+$KNOWN_AGENTS }$_ra"
+  done
+  if [ -z "$KNOWN_AGENTS" ]; then
+    echo "RUN_AGENT_AGENTS: no valid agents specified. Built-in agents: ${BUILTIN_AGENTS// /,}" >&2
+    exit 2
+  fi
+else
+  KNOWN_AGENTS="$BUILTIN_AGENTS"
+fi
 
 show_help() {
   cat <<HELP
@@ -33,7 +63,8 @@ Arguments:
 Environment variables:
   RUNS_DIR            Override the runs output directory (default: ./runs)
   MESSAGE_BUS         Override the message bus file (default: ./MESSAGE-BUS.md)
-  RUN_AGENT_ENABLED   Comma-separated list of enabled agents (default: all)
+  RUN_AGENT_AGENTS    Comma-separated list of available agents (default: all built-in)
+  RUN_AGENT_ENABLED   Comma-separated list of enabled agents (default: all available)
 
 Exit codes:
   0  Agent completed successfully
@@ -67,8 +98,21 @@ AGENT="${1:-codex}"
 CWD="${2:-$BASE_DIR}"
 PROMPT_FILE="${3:-$BASE_DIR/prompt.md}"
 
-# Validate agent name: must be alphanumeric/underscore only
+# Validate agent name: must be alphanumeric/underscore and in KNOWN_AGENTS
 if [[ ! "$AGENT" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+  echo "Unknown agent: $AGENT" >&2
+  echo "Known agents: ${KNOWN_AGENTS// /,}" >&2
+  exit 2
+fi
+
+_agent_known=false
+for _ka in $KNOWN_AGENTS; do
+  if [ "$_ka" = "$AGENT" ]; then
+    _agent_known=true
+    break
+  fi
+done
+if [ "$_agent_known" = false ]; then
   echo "Unknown agent: $AGENT" >&2
   echo "Known agents: ${KNOWN_AGENTS// /,}" >&2
   exit 2
