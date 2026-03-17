@@ -16,5 +16,10 @@ prompt-marketing-*.md
 !static/**/*.png
 
 .idea/
-!static/MESSAGE-BUS.md
 .tmp/
+
+# static/ files synced at build time by scripts/sync-static.sh
+# Only images, CSS, and favicon are checked in
+static/*.sh
+static/*.md
+static/LICENSE
