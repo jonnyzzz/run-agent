@@ -78,7 +78,7 @@ Every AI Agent invocation creates an isolated run folder under `runs/`. Each fol
 Give this prompt to your AI Agent to get started with multi-agent orchestration:
 
 ```
-Here is the task
+<PUT YOUR TASK DESCRIPTION HERE>
 
 In order to deliver on the task, you should use https://run-agent.jonnyzzz.com/run-agent.sh script
 to start more tasks. You should follow the https://run-agent.jonnyzzz.com/THE_PROMPT_v5.md and
