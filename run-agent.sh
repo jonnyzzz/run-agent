@@ -16,16 +16,8 @@ MESSAGE_BUS="${MESSAGE_BUS:-$BASE_DIR/MESSAGE-BUS.md}"
 export RUNS_DIR
 export MESSAGE_BUS
 
-# Agent CLI definitions — one variable per agent, easy to add new ones
-AGENT_CLI_codex="codex exec --dangerously-bypass-approvals-and-sandbox -C \$CWD -"
-AGENT_CLI_claude="claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions"
-AGENT_CLI_gemini="gemini --screen-reader true --approval-mode yolo"
-
-# Collect known agent names from AGENT_CLI_* variables
-_known_agents=()
-for _v in "${!AGENT_CLI_@}"; do
-  _known_agents+=("${_v#AGENT_CLI_}")
-done
+# Known agent names (used for help and validation)
+KNOWN_AGENTS="codex claude gemini"
 
 show_help() {
   cat <<HELP
@@ -34,7 +26,7 @@ run-agent.sh — Unified AI Agent runner
 Usage: ./run-agent.sh <agent> <cwd> <prompt_file>
 
 Arguments:
-  agent        Agent to run: $(IFS=,; echo "${_known_agents[*]}")
+  agent        Agent to run: ${KNOWN_AGENTS// /,}
   cwd          Working directory for the agent (default: script directory)
   prompt_file  Path to the prompt file (default: ./prompt.md)
 
@@ -75,6 +67,13 @@ AGENT="${1:-codex}"
 CWD="${2:-$BASE_DIR}"
 PROMPT_FILE="${3:-$BASE_DIR/prompt.md}"
 
+# Validate agent name: must be alphanumeric/underscore only
+if [[ ! "$AGENT" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+  echo "Unknown agent: $AGENT" >&2
+  echo "Known agents: ${KNOWN_AGENTS// /,}" >&2
+  exit 2
+fi
+
 # Normalize prompt path to absolute
 PROMPT_FILE="$(cd "$(dirname "$PROMPT_FILE")" && pwd)/$(basename "$PROMPT_FILE")"
 if [ ! -f "$PROMPT_FILE" ]; then
@@ -82,13 +81,15 @@ if [ ! -f "$PROMPT_FILE" ]; then
   exit 1
 fi
 
+# Normalize CWD to absolute path
+CWD="$(cd "$CWD" && pwd)"
+
 # Check if the requested agent is enabled via RUN_AGENT_ENABLED
 # Default: all agents enabled (empty or unset means all enabled)
 if [ -n "${RUN_AGENT_ENABLED:-}" ]; then
   _agent_allowed=false
   IFS=',' read -ra _enabled_agents <<< "$RUN_AGENT_ENABLED"
   for _ea in "${_enabled_agents[@]}"; do
-    # Trim whitespace
     _ea="$(echo "$_ea" | tr -d '[:space:]')"
     if [ "$_ea" = "$AGENT" ]; then
       _agent_allowed=true
@@ -101,13 +102,25 @@ if [ -n "${RUN_AGENT_ENABLED:-}" ]; then
   fi
 fi
 
-# Look up the CLI for the requested agent
-_cli_var="AGENT_CLI_${AGENT}"
-if [ -z "${!_cli_var:-}" ]; then
-  echo "Unknown agent: $AGENT" >&2
-  echo "Known agents: $(IFS=,; echo "${_known_agents[*]}")" >&2
-  exit 2
-fi
+# Build agent command array — properly quoted, no eval needed.
+# To add a new agent, add a case entry here and update KNOWN_AGENTS above.
+AGENT_CMD=()
+case "$AGENT" in
+  codex)
+    AGENT_CMD=(codex exec --dangerously-bypass-approvals-and-sandbox -C "$CWD" -)
+    ;;
+  claude)
+    AGENT_CMD=(claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions)
+    ;;
+  gemini)
+    AGENT_CMD=(gemini --screen-reader true --approval-mode yolo)
+    ;;
+  *)
+    echo "Unknown agent: $AGENT" >&2
+    echo "Known agents: ${KNOWN_AGENTS// /,}" >&2
+    exit 2
+    ;;
+esac
 
 RUN_ID="run_$(date -u +%Y%m%d-%H%M%S)-$$"
 RUN_DIR="$RUNS_DIR/$RUN_ID"
@@ -124,11 +137,6 @@ PID_FILE="$RUN_DIR/pid.txt"
 CWD_FILE="$RUN_DIR/cwd.txt"
 
 cp "$PROMPT_FILE" "$RUN_DIR/prompt.md"
-
-# Expand variables (e.g. $CWD in codex definition) and split into array
-# shellcheck disable=SC2206
-_cli_expanded=$(eval echo "${!_cli_var}")
-AGENT_CMD=($_cli_expanded)
 
 CMDLINE="${AGENT_CMD[*]} < \"$RUN_DIR/prompt.md\""
 (

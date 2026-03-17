@@ -860,6 +860,300 @@ for flag in -h --help help; do
   fi
 done
 
+# --- Test 24: Prompt content reaches agent stdin ---
+echo ""
+echo "--- Test 24: Prompt content reaches agent stdin ---"
+
+stdin_bin="$TEST_TMP/stdin-bin"
+mkdir -p "$stdin_bin"
+cat > "$stdin_bin/claude" <<'MOCK'
+#!/bin/bash
+cat  # echo stdin to stdout
+exit 0
+MOCK
+chmod +x "$stdin_bin/claude"
+
+prompt_file="$(create_prompt "UNIQUE_PROMPT_CONTENT_12345")"
+runs_dir="$TEST_TMP/runs24"
+
+rc=0
+out=$(PATH="$stdin_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+if grep -q "UNIQUE_PROMPT_CONTENT_12345" "$run_dir/agent-stdout.txt"; then
+  pass "prompt content delivered to agent stdin"
+else
+  fail "prompt content NOT delivered to agent stdin"
+fi
+
+# --- Test 25: Agent receives correct CLI arguments ---
+echo ""
+echo "--- Test 25: Agent receives correct CLI arguments ---"
+
+args_bin="$TEST_TMP/args-bin"
+mkdir -p "$args_bin"
+cat > "$args_bin/claude" <<'MOCK'
+#!/bin/bash
+echo "ARGS:$*"
+exit 0
+MOCK
+chmod +x "$args_bin/claude"
+
+cat > "$args_bin/codex" <<'MOCK'
+#!/bin/bash
+echo "ARGS:$*"
+exit 0
+MOCK
+chmod +x "$args_bin/codex"
+
+prompt_file="$(create_prompt "arg test")"
+runs_dir="$TEST_TMP/runs25"
+
+# Test claude args
+rc=0
+out=$(PATH="$args_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+if grep -q "\-\-permission-mode" "$run_dir/agent-stdout.txt"; then
+  pass "claude receives --permission-mode flag"
+else
+  fail "claude missing --permission-mode flag"
+fi
+
+if grep -q "\-\-output-format" "$run_dir/agent-stdout.txt"; then
+  pass "claude receives --output-format flag"
+else
+  fail "claude missing --output-format flag"
+fi
+
+# Test codex args — verify -C flag with correct CWD
+rc=0
+out=$(PATH="$args_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" codex "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+ws_real="$(cd "$ws" && pwd)"
+if grep -q "\-C" "$run_dir/agent-stdout.txt"; then
+  pass "codex receives -C flag"
+else
+  fail "codex missing -C flag"
+fi
+
+# --- Test 26: CWD with spaces ---
+echo ""
+echo "--- Test 26: CWD with spaces is handled correctly ---"
+
+cwd_spaces="$TEST_TMP/path with spaces"
+mkdir -p "$cwd_spaces"
+prompt_file="$(create_prompt "spaces test")"
+runs_dir="$TEST_TMP/runs26"
+
+# Use a mock that prints pwd
+cwd_check_bin="$TEST_TMP/cwd-check-bin"
+mkdir -p "$cwd_check_bin"
+cat > "$cwd_check_bin/claude" <<'MOCK'
+#!/bin/bash
+pwd
+exit 0
+MOCK
+chmod +x "$cwd_check_bin/claude"
+
+rc=0
+out=$(PATH="$cwd_check_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$cwd_spaces" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "agent runs with CWD containing spaces"
+else
+  fail "agent fails (exit $rc) with CWD containing spaces"
+fi
+
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+if grep -q "path with spaces" "$run_dir/agent-stdout.txt"; then
+  pass "agent CWD is correct with spaces"
+else
+  fail "agent CWD incorrect with spaces"
+fi
+
+# --- Test 27: Shell metacharacters in agent name are rejected ---
+echo ""
+echo "--- Test 27: Shell metacharacters in agent name are rejected ---"
+
+prompt_file="$(create_prompt "injection test")"
+runs_dir="$TEST_TMP/runs27"
+
+for bad_name in '$(echo pwned)' 'foo;bar' 'agent name' '../etc'; do
+  rc=0
+  out=$(RUNS_DIR="$runs_dir" "$ws/run-agent.sh" "$bad_name" "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+
+  if [ "$rc" -eq 2 ] || [ "$rc" -eq 1 ]; then
+    pass "agent name '$bad_name' rejected (exit $rc)"
+  else
+    fail "agent name '$bad_name' NOT rejected (exit $rc)"
+  fi
+done
+
+# --- Test 28: Help does not create run directories ---
+echo ""
+echo "--- Test 28: Help does not create run directories ---"
+
+runs_dir="$TEST_TMP/runs28"
+mkdir -p "$runs_dir"
+
+for flag in -h --help help; do
+  out=$(RUNS_DIR="$runs_dir" "$ws/run-agent.sh" "$flag" 2>/dev/null) || true
+  dir_count=$(find "$runs_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d '[:space:]')
+  if [ "$dir_count" -eq 0 ]; then
+    pass "'$flag' creates no run directory"
+  else
+    fail "'$flag' created $dir_count run directories"
+  fi
+done
+
+# --- Test 29: cwd.txt values are correct (not just present) ---
+echo ""
+echo "--- Test 29: cwd.txt values are correct ---"
+
+prompt_file="$(create_prompt "value check")"
+runs_dir="$TEST_TMP/runs29"
+
+rc=0
+out=$(PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+ws_real="$(cd "$ws" && pwd)"
+
+# Check RUN_ID value matches what was printed
+if grep -q "^RUN_ID=$run_id$" "$run_dir/cwd.txt"; then
+  pass "cwd.txt RUN_ID value matches output"
+else
+  fail "cwd.txt RUN_ID value mismatch"
+fi
+
+# Check CWD is an absolute path
+cwd_val=$(grep "^CWD=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2)
+if [[ "$cwd_val" == /* ]]; then
+  pass "cwd.txt CWD is absolute path"
+else
+  fail "cwd.txt CWD is not absolute: $cwd_val"
+fi
+
+# Check CMD is non-empty
+cmd_val=$(grep "^CMD=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2-)
+if [ -n "$cmd_val" ]; then
+  pass "cwd.txt CMD is non-empty"
+else
+  fail "cwd.txt CMD is empty"
+fi
+
+# Check PID is numeric
+pid_val=$(grep "^PID=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2)
+if [[ "$pid_val" =~ ^[0-9]+$ ]]; then
+  pass "cwd.txt PID is numeric"
+else
+  fail "cwd.txt PID is not numeric: $pid_val"
+fi
+
+# --- Test 30: RUNS_DIR and MESSAGE_BUS are exported to agent ---
+echo ""
+echo "--- Test 30: RUNS_DIR and MESSAGE_BUS exported to agent ---"
+
+env_bin="$TEST_TMP/env-bin"
+mkdir -p "$env_bin"
+cat > "$env_bin/claude" <<'MOCK'
+#!/bin/bash
+echo "RUNS_DIR=$RUNS_DIR"
+echo "MESSAGE_BUS=$MESSAGE_BUS"
+exit 0
+MOCK
+chmod +x "$env_bin/claude"
+
+prompt_file="$(create_prompt "env test")"
+runs_dir="$TEST_TMP/runs30"
+
+rc=0
+out=$(PATH="$env_bin:$PATH" RUNS_DIR="$runs_dir" MESSAGE_BUS="$TEST_TMP/bus.md" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+if grep -q "RUNS_DIR=$runs_dir" "$run_dir/agent-stdout.txt"; then
+  pass "RUNS_DIR exported to agent process"
+else
+  fail "RUNS_DIR NOT exported to agent process"
+fi
+
+if grep -q "MESSAGE_BUS=$TEST_TMP/bus.md" "$run_dir/agent-stdout.txt"; then
+  pass "MESSAGE_BUS exported to agent process"
+else
+  fail "MESSAGE_BUS NOT exported to agent process"
+fi
+
+# --- Test 31: RUN_AGENT_ENABLED edge cases ---
+echo ""
+echo "--- Test 31: RUN_AGENT_ENABLED edge cases ---"
+
+prompt_file="$(create_prompt "edge cases")"
+runs_dir="$TEST_TMP/runs31"
+
+# Trailing comma: "claude," should still enable claude
+rc=0
+out=$(RUN_AGENT_ENABLED="claude," PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "trailing comma: claude still enabled"
+else
+  fail "trailing comma: claude rejected (exit $rc)"
+fi
+
+# Whitespace around agent names: " claude " should work
+rc=0
+out=$(RUN_AGENT_ENABLED=" claude , codex " PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "whitespace in RUN_AGENT_ENABLED: claude enabled"
+else
+  fail "whitespace in RUN_AGENT_ENABLED: claude rejected (exit $rc)"
+fi
+
+# Substring non-match: "claude2" should NOT enable "claude"
+rc=0
+out=$(RUN_AGENT_ENABLED="claude2" PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+if [ "$rc" -eq 3 ]; then
+  pass "substring non-match: claude2 does not enable claude"
+else
+  fail "substring non-match: claude unexpectedly allowed (exit $rc)"
+fi
+
+# --- Test 32: CWD is normalized to absolute path ---
+echo ""
+echo "--- Test 32: CWD is normalized to absolute path in cwd.txt ---"
+
+# Create a relative-path accessible directory
+rel_dir="$TEST_TMP/rel-cwd-target"
+mkdir -p "$rel_dir"
+prompt_file="$(create_prompt "relative cwd")"
+runs_dir="$TEST_TMP/runs32"
+
+rc=0
+out=$(cd "$TEST_TMP" && PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "./rel-cwd-target" "$prompt_file" 2>/dev/null) || rc=$?
+
+if [ "$rc" -eq 0 ]; then
+  pass "relative CWD accepted"
+else
+  fail "relative CWD rejected (exit $rc)"
+fi
+
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+cwd_val=$(grep "^CWD=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2)
+if [[ "$cwd_val" == /* ]]; then
+  pass "relative CWD normalized to absolute in cwd.txt"
+else
+  fail "CWD not normalized: $cwd_val"
+fi
+
 # ============================================================
 # Summary
 # ============================================================
