@@ -1,19 +1,45 @@
 # run-agent.sh
 
-**Orchestrate a swarm of AI Agents from your terminal.** Built by [Eugene Petrenko](https://jonnyzzz.com).
+**Split complex tasks across multiple AI Agents that research, implement, review, and test in parallel -- so each agent stays focused and your codebase gets treated like a real team project.** Built by [Eugene Petrenko](https://jonnyzzz.com).
 
-Parallel AI. Zero magic. Full control.
+## What is run-agent.sh?
+
+AI Agents produce better results when they focus on one thing at a time. A single agent tasked with "research the codebase, implement the feature, write tests, review the code, and fix any issues" will lose context, skip steps, or produce shallow work.
+
+`run-agent.sh` lets your agents delegate sub-tasks to new agent processes. The orchestrator breaks work into focused pieces -- research, implementation, review, testing -- and launches a separate agent for each. Each agent works in isolation with a clear, narrow prompt, then reports back through the message bus.
+
+**If a task needs parallel research, isolated experiments, or independent review, this is the runner that makes that practical.**
+
+### Example Prompt
+
+Paste this into Claude, Codex, or Gemini. The root AI Agent will download the orchestration files, create a task workspace, and start delegating work:
+
+```
+<PUT YOUR TASK DESCRIPTION HERE>
+
+In order to deliver on the task, you should use https://run-agent.jonnyzzz.com/run-agent.sh script
+to start more tasks. You should follow the https://run-agent.jonnyzzz.com/THE_PROMPT_v5.md and
+other files relative to it as the main process. Your purpose is to orchestrate and delegate
+the work to other run-agent instances that you start; you must not do the work yourself.
+So create /loop when necessary to monitor the process. Never stop unless the work is completed.
+
+All your prompts should use the https://run-agent.jonnyzzz.com/MESSAGE-BUS.md as the key
+communication principle.
+
+Make sure you download the files locally and use full paths to the downloaded files.
+```
 
 ---
 
 ## `run-agent.sh` -- The Runner
 
-A unified shell script that launches AI Agents (Claude, Codex, Gemini) with full isolation and traceability. Each run gets its own folder with captured prompts, stdout/stderr, PID tracking, and exit codes.
+Launch Claude, Codex, or Gemini the same way and keep the evidence. Every run captures the prompt, stdout/stderr, PID, exit code, and working directory so you can see what happened after the agent finishes.
 
 ```bash
 ./run-agent.sh claude /path/to/repo prompt.md
 ./run-agent.sh codex /path/to/repo prompt.md
 ./run-agent.sh gemini /path/to/repo prompt.md
+./run-agent.sh any /path/to/repo prompt.md  # random agent
 ```
 
 Works best with [THE_PROMPT_v5.md](#the_prompt_v5md----the-brain) to orchestrate multi-agent workflows.
@@ -177,7 +203,18 @@ nohup ./monitor-agents.sh &  # 10-minute polling
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `RUNS_DIR` | `./runs` | Directory for agent run folders |
-| `MESSAGE_BUS` | `./MESSAGE-BUS.md` | Append-only trace log |
+| `RUN_AGENT_AGENTS` | all built-in | Comma-separated list of available agents (e.g. `claude,codex`) |
+
+### Exported to agent process
+
+| Variable | Description |
+|----------|-------------|
+| `RUNS_DIR` | Absolute path to the runs directory |
+| `MESSAGE_BUS` | Absolute path to `MESSAGE-BUS.md` (inside `RUNS_DIR`) |
+| `RUN_ID` | Unique run identifier for this invocation |
+| `PROMPT` | Absolute path to the copied prompt file |
+
+`CLAUDECODE` is explicitly unset before spawning to prevent leaking nested runtime context.
 
 ## Website
 
