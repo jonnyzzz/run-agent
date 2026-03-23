@@ -48,7 +48,7 @@ Supporting files: role-specific prompts (`THE_PROMPT_v5_*.md`), monitoring scrip
 |----------|-----|-------|
 | **Claude** | `claude` | `-p --tools default --permission-mode bypassPermissions` |
 | **Codex** | `codex` | `exec --dangerously-bypass-approvals-and-sandbox` |
-| **Gemini** | `gemini` | `--screen-reader true --approval-mode yolo` |
+| **Gemini** | `gemini` | `--screen-reader true --sandbox=false --approval-mode yolo --include-directories` |
 
 ---
 

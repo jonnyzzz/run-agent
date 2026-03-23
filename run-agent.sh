@@ -153,7 +153,7 @@ case "$AGENT" in
     AGENT_CMD=(claude -p --input-format text --output-format text --tools default --permission-mode bypassPermissions)
     ;;
   gemini)
-    AGENT_CMD=(gemini --screen-reader true --approval-mode yolo)
+    AGENT_CMD=(gemini --screen-reader true --sandbox=false --approval-mode yolo --include-directories "$CWD")
     ;;
   *)
     echo "Unknown agent: $AGENT" >&2

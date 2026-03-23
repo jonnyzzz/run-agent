@@ -1220,6 +1220,88 @@ fi
 
 # (Test 38 removed — RUN_AGENT_ENABLED dropped)
 
+# --- Test 39: Gemini command includes --sandbox=false ---
+echo ""
+echo "--- Test 39: Gemini command includes --sandbox=false ---"
+
+gemini_args_bin="$TEST_TMP/gemini-args-bin"
+mkdir -p "$gemini_args_bin"
+cat > "$gemini_args_bin/gemini" <<'MOCK'
+#!/bin/bash
+echo "ARGS:$*"
+exit 0
+MOCK
+chmod +x "$gemini_args_bin/gemini"
+
+prompt_file="$(create_prompt "gemini sandbox test")"
+runs_dir="$TEST_TMP/runs39"
+
+rc=0
+out=$(PATH="$gemini_args_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+if grep -q "\-\-sandbox=false" "$run_dir/agent-stdout.txt"; then
+  pass "gemini receives --sandbox=false flag"
+else
+  fail "gemini missing --sandbox=false flag"
+fi
+
+# --- Test 40: Gemini command includes --approval-mode yolo ---
+echo ""
+echo "--- Test 40: Gemini command includes --approval-mode yolo ---"
+
+runs_dir="$TEST_TMP/runs40"
+prompt_file="$(create_prompt "gemini approval test")"
+
+rc=0
+out=$(PATH="$gemini_args_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+if grep -q "\-\-approval-mode yolo" "$run_dir/agent-stdout.txt"; then
+  pass "gemini receives --approval-mode yolo flag"
+else
+  fail "gemini missing --approval-mode yolo flag"
+fi
+
+# --- Test 41: Gemini command includes --include-directories with CWD ---
+echo ""
+echo "--- Test 41: Gemini command includes --include-directories with CWD ---"
+
+gemini_cwd_target="$TEST_TMP/gemini-cwd-target"
+mkdir -p "$gemini_cwd_target"
+runs_dir="$TEST_TMP/runs41"
+prompt_file="$(create_prompt "gemini include-dirs test")"
+
+rc=0
+out=$(PATH="$gemini_args_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" gemini "$gemini_cwd_target" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
+
+gemini_cwd_real="$(cd "$gemini_cwd_target" && pwd)"
+if grep -q "\-\-include-directories $gemini_cwd_real" "$run_dir/agent-stdout.txt"; then
+  pass "gemini receives --include-directories with correct CWD"
+else
+  fail "gemini missing --include-directories with CWD"
+fi
+
+# --- Test 42: Gemini CWD is correctly recorded in cwd.txt ---
+echo ""
+echo "--- Test 42: Gemini CWD recorded in cwd.txt ---"
+
+if grep -q "^CWD=$gemini_cwd_real" "$run_dir/cwd.txt"; then
+  pass "gemini cwd.txt records correct CWD"
+else
+  fail "gemini cwd.txt does not record correct CWD"
+fi
+
+if grep -q "^AGENT=gemini" "$run_dir/cwd.txt"; then
+  pass "gemini cwd.txt records AGENT=gemini"
+else
+  fail "gemini cwd.txt does not record AGENT=gemini"
+fi
+
 # ============================================================
 # Summary
 # ============================================================
