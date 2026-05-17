@@ -228,13 +228,20 @@ else
 fi
 
 # Check all expected files
-for f in prompt.md cwd.txt agent-stdout.txt agent-stderr.txt run-agent.sh; do
+for f in prompt.md run-info.txt agent-stdout.txt agent-stderr.txt run-agent.sh; do
   if [ -f "$run_dir/$f" ]; then
     pass "$f exists in run dir"
   else
     fail "$f MISSING from run dir"
   fi
 done
+
+# Legacy filename must not be produced (rename contract)
+if [ ! -e "$run_dir/cwd.txt" ]; then
+  pass "legacy cwd.txt is not produced"
+else
+  fail "legacy cwd.txt still present"
+fi
 
 # pid.txt should be removed after completion
 if [ ! -f "$run_dir/pid.txt" ]; then
@@ -257,27 +264,27 @@ else
   fail "agent-stdout.txt missing mock claude output"
 fi
 
-# Check cwd.txt contains expected metadata
-for key in RUN_ID CWD AGENT CMD PROMPT STDOUT STDERR PID EXIT_CODE; do
-  if grep -q "^${key}=" "$run_dir/cwd.txt"; then
-    pass "cwd.txt contains $key"
+# Check run-info.txt contains expected metadata
+for key in RUN_ID RUN_DIR CWD AGENT CMD PROMPT STDOUT STDERR PID EXIT_CODE; do
+  if grep -q "^${key}=" "$run_dir/run-info.txt"; then
+    pass "run-info.txt contains $key"
   else
-    fail "cwd.txt missing $key"
+    fail "run-info.txt missing $key"
   fi
 done
 
-# Check AGENT value in cwd.txt
-if grep -q "^AGENT=claude" "$run_dir/cwd.txt"; then
-  pass "cwd.txt AGENT=claude"
+# Check AGENT value in run-info.txt
+if grep -q "^AGENT=claude" "$run_dir/run-info.txt"; then
+  pass "run-info.txt AGENT=claude"
 else
-  fail "cwd.txt AGENT is not claude"
+  fail "run-info.txt AGENT is not claude"
 fi
 
 # Check EXIT_CODE=0
-if grep -q "^EXIT_CODE=0" "$run_dir/cwd.txt"; then
-  pass "cwd.txt EXIT_CODE=0"
+if grep -q "^EXIT_CODE=0" "$run_dir/run-info.txt"; then
+  pass "run-info.txt EXIT_CODE=0"
 else
-  fail "cwd.txt EXIT_CODE is not 0"
+  fail "run-info.txt EXIT_CODE is not 0"
 fi
 
 # --- Test 5: Successful codex run (mock) ---
@@ -305,10 +312,10 @@ else
   fail "agent-stdout.txt missing mock codex output"
 fi
 
-if grep -q "^AGENT=codex" "$run_dir/cwd.txt"; then
-  pass "cwd.txt AGENT=codex"
+if grep -q "^AGENT=codex" "$run_dir/run-info.txt"; then
+  pass "run-info.txt AGENT=codex"
 else
-  fail "cwd.txt AGENT is not codex"
+  fail "run-info.txt AGENT is not codex"
 fi
 
 # --- Test 6: Successful gemini run (mock) ---
@@ -336,10 +343,10 @@ else
   fail "agent-stdout.txt missing mock gemini output"
 fi
 
-if grep -q "^AGENT=gemini" "$run_dir/cwd.txt"; then
-  pass "cwd.txt AGENT=gemini"
+if grep -q "^AGENT=gemini" "$run_dir/run-info.txt"; then
+  pass "run-info.txt AGENT=gemini"
 else
-  fail "cwd.txt AGENT is not gemini"
+  fail "run-info.txt AGENT is not gemini"
 fi
 
 # --- Test 7: Exit code propagation ---
@@ -377,10 +384,10 @@ else
   fail "pid.txt still exists after failed run"
 fi
 
-if grep -q "^EXIT_CODE=42" "$run_dir/cwd.txt"; then
-  pass "cwd.txt records EXIT_CODE=42"
+if grep -q "^EXIT_CODE=42" "$run_dir/run-info.txt"; then
+  pass "run-info.txt records EXIT_CODE=42"
 else
-  fail "cwd.txt does not record EXIT_CODE=42"
+  fail "run-info.txt does not record EXIT_CODE=42"
 fi
 
 # --- Test 8: RUNS_DIR env override ---
@@ -483,33 +490,35 @@ else
   fail "RUN_ID format unexpected: $run_id"
 fi
 
-# --- Test 12: Output includes RUN_ID, RUN_DIR, PID ---
+# --- Test 12: Stdout is an exact mirror of run-info.txt ---
 echo ""
-echo "--- Test 12: Script output includes RUN_ID, RUN_DIR, PID ---"
+echo "--- Test 12: Stdout exactly mirrors run-info.txt (ordered, byte-for-byte) ---"
 
 prompt_file="$(create_prompt "Test output lines")"
 runs_dir="$TEST_TMP/runs12"
 
 rc=0
 out=$(PATH="$mock_bin:$PATH" RUNS_DIR="$runs_dir" "$ws/run-agent.sh" claude "$ws" "$prompt_file" 2>/dev/null) || rc=$?
+run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
+run_dir="$runs_dir/$run_id"
 
-if echo "$out" | grep -q "^RUN_ID="; then
-  pass "output contains RUN_ID="
+# For explicit-agent runs, the stdout must equal run-info.txt line for line.
+# (The `any`-mode AGENT_SELECTED= line is exercised by its own test.)
+if diff -u "$run_dir/run-info.txt" <(printf '%s\n' "$out") >/dev/null 2>&1; then
+  pass "stdout matches run-info.txt exactly (ordered, no extra lines)"
 else
-  fail "output missing RUN_ID="
+  fail "stdout diverges from run-info.txt"
+  diff -u "$run_dir/run-info.txt" <(printf '%s\n' "$out") | head -20 || true
 fi
 
-if echo "$out" | grep -q "^RUN_DIR="; then
-  pass "output contains RUN_DIR="
-else
-  fail "output missing RUN_DIR="
-fi
-
-if echo "$out" | grep -q "^PID="; then
-  pass "output contains PID="
-else
-  fail "output missing PID="
-fi
+# Every documented key must appear on both surfaces (regression guard).
+for key in RUN_ID RUN_DIR CWD AGENT CMD PROMPT STDOUT STDERR PID EXIT_CODE; do
+  if echo "$out" | grep -q "^${key}="; then
+    pass "stdout contains $key="
+  else
+    fail "stdout missing $key="
+  fi
+done
 
 # --- Test 13: Relative prompt path normalization ---
 echo ""
@@ -573,11 +582,11 @@ else
   fail "agent CWD mismatch (expected $cwd_target_real)"
 fi
 
-# Check cwd.txt records the correct CWD
-if grep -q "^CWD=$cwd_target_real" "$run_dir/cwd.txt" || grep -q "^CWD=$cwd_target" "$run_dir/cwd.txt"; then
-  pass "cwd.txt records correct CWD"
+# Check run-info.txt records the correct CWD (must be the normalized absolute path)
+if grep -Fxq "CWD=$cwd_target_real" "$run_dir/run-info.txt"; then
+  pass "run-info.txt records correct CWD"
 else
-  fail "cwd.txt does not record correct CWD"
+  fail "run-info.txt does not record correct normalized CWD"
 fi
 
 # --- Test 15: Exported env vars verified in source ---
@@ -984,9 +993,9 @@ for flag in -h --help help; do
   fi
 done
 
-# --- Test 29: cwd.txt values are correct (not just present) ---
+# --- Test 29: run-info.txt values are correct (not just present) ---
 echo ""
-echo "--- Test 29: cwd.txt values are correct ---"
+echo "--- Test 29: run-info.txt values are correct ---"
 
 prompt_file="$(create_prompt "value check")"
 runs_dir="$TEST_TMP/runs29"
@@ -998,34 +1007,34 @@ run_dir="$runs_dir/$run_id"
 ws_real="$(cd "$ws" && pwd)"
 
 # Check RUN_ID value matches what was printed
-if grep -q "^RUN_ID=$run_id$" "$run_dir/cwd.txt"; then
-  pass "cwd.txt RUN_ID value matches output"
+if grep -q "^RUN_ID=$run_id$" "$run_dir/run-info.txt"; then
+  pass "run-info.txt RUN_ID value matches output"
 else
-  fail "cwd.txt RUN_ID value mismatch"
+  fail "run-info.txt RUN_ID value mismatch"
 fi
 
 # Check CWD is an absolute path
-cwd_val=$(grep "^CWD=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2)
+cwd_val=$(grep "^CWD=" "$run_dir/run-info.txt" | head -1 | cut -d= -f2)
 if [[ "$cwd_val" == /* ]]; then
-  pass "cwd.txt CWD is absolute path"
+  pass "run-info.txt CWD is absolute path"
 else
-  fail "cwd.txt CWD is not absolute: $cwd_val"
+  fail "run-info.txt CWD is not absolute: $cwd_val"
 fi
 
 # Check CMD is non-empty
-cmd_val=$(grep "^CMD=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2-)
+cmd_val=$(grep "^CMD=" "$run_dir/run-info.txt" | head -1 | cut -d= -f2-)
 if [ -n "$cmd_val" ]; then
-  pass "cwd.txt CMD is non-empty"
+  pass "run-info.txt CMD is non-empty"
 else
-  fail "cwd.txt CMD is empty"
+  fail "run-info.txt CMD is empty"
 fi
 
 # Check PID is numeric
-pid_val=$(grep "^PID=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2)
+pid_val=$(grep "^PID=" "$run_dir/run-info.txt" | head -1 | cut -d= -f2)
 if [[ "$pid_val" =~ ^[0-9]+$ ]]; then
-  pass "cwd.txt PID is numeric"
+  pass "run-info.txt PID is numeric"
 else
-  fail "cwd.txt PID is not numeric: $pid_val"
+  fail "run-info.txt PID is not numeric: $pid_val"
 fi
 
 # --- Test 30: RUNS_DIR and MESSAGE_BUS are exported to agent ---
@@ -1066,7 +1075,7 @@ fi
 
 # --- Test 32: CWD is normalized to absolute path ---
 echo ""
-echo "--- Test 32: CWD is normalized to absolute path in cwd.txt ---"
+echo "--- Test 32: CWD is normalized to absolute path in run-info.txt ---"
 
 # Create a relative-path accessible directory
 rel_dir="$TEST_TMP/rel-cwd-target"
@@ -1086,9 +1095,9 @@ fi
 run_id=$(echo "$out" | grep "^RUN_ID=" | head -1 | cut -d= -f2)
 run_dir="$runs_dir/$run_id"
 
-cwd_val=$(grep "^CWD=" "$run_dir/cwd.txt" | head -1 | cut -d= -f2)
+cwd_val=$(grep "^CWD=" "$run_dir/run-info.txt" | head -1 | cut -d= -f2)
 if [[ "$cwd_val" == /* ]]; then
-  pass "relative CWD normalized to absolute in cwd.txt"
+  pass "relative CWD normalized to absolute in run-info.txt"
 else
   fail "CWD not normalized: $cwd_val"
 fi
@@ -1286,20 +1295,20 @@ else
   fail "gemini missing --include-directories with CWD"
 fi
 
-# --- Test 42: Gemini CWD is correctly recorded in cwd.txt ---
+# --- Test 42: Gemini CWD is correctly recorded in run-info.txt ---
 echo ""
-echo "--- Test 42: Gemini CWD recorded in cwd.txt ---"
+echo "--- Test 42: Gemini CWD recorded in run-info.txt ---"
 
-if grep -q "^CWD=$gemini_cwd_real" "$run_dir/cwd.txt"; then
-  pass "gemini cwd.txt records correct CWD"
+if grep -q "^CWD=$gemini_cwd_real" "$run_dir/run-info.txt"; then
+  pass "gemini run-info.txt records correct CWD"
 else
-  fail "gemini cwd.txt does not record correct CWD"
+  fail "gemini run-info.txt does not record correct CWD"
 fi
 
-if grep -q "^AGENT=gemini" "$run_dir/cwd.txt"; then
-  pass "gemini cwd.txt records AGENT=gemini"
+if grep -q "^AGENT=gemini" "$run_dir/run-info.txt"; then
+  pass "gemini run-info.txt records AGENT=gemini"
 else
-  fail "gemini cwd.txt does not record AGENT=gemini"
+  fail "gemini run-info.txt does not record AGENT=gemini"
 fi
 
 # ============================================================

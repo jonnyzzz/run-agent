@@ -25,7 +25,7 @@ while true; do
       fi
       continue
     fi
-    if rg -q "EXIT_CODE=" "$run_dir/cwd.txt" 2>/dev/null; then
+    if rg -q "EXIT_CODE=" "$run_dir/run-info.txt" 2>/dev/null; then
       echo "  $run_dir: finished (exit recorded)" | tee -a "$LOG"
     else
       echo "  $run_dir: unknown (no pid/exit)" | tee -a "$LOG"

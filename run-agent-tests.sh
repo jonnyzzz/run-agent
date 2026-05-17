@@ -26,7 +26,7 @@ run_test() {
   fi
 
   # Validate files
-  for f in prompt.md cwd.txt agent-stdout.txt agent-stderr.txt run-agent.sh; do
+  for f in prompt.md run-info.txt agent-stdout.txt agent-stderr.txt run-agent.sh; do
     if [ ! -f "$run_dir/$f" ]; then
       echo "FAILED: missing $f in $run_dir" >&2
       exit 1
@@ -36,8 +36,12 @@ run_test() {
     echo "FAILED: pid.txt should be removed after completion ($run_id)" >&2
     exit 1
   fi
-  if ! rg -q "EXIT_CODE=" "$run_dir/cwd.txt"; then
-    echo "FAILED: EXIT_CODE missing from cwd.txt ($run_id)" >&2
+  if [ -e "$run_dir/cwd.txt" ]; then
+    echo "FAILED: legacy cwd.txt should not be produced ($run_id)" >&2
+    exit 1
+  fi
+  if ! rg -q "EXIT_CODE=" "$run_dir/run-info.txt"; then
+    echo "FAILED: EXIT_CODE missing from run-info.txt ($run_id)" >&2
     exit 1
   fi
 
@@ -52,5 +56,11 @@ run_test() {
 
 run_test "codex" "Test: What is 7*7? Reply with just the number." "49"
 run_test "claude" "Test: Reply with the word OK." "OK"
+
+if [ -n "${GEMINI_API_KEY:-}" ]; then
+  run_test "gemini" "Test: Reply with the word OK." "OK"
+else
+  echo "SKIP: gemini (GEMINI_API_KEY not set)"
+fi
 
 echo "All run-agent tests passed."

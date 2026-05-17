@@ -17,6 +17,8 @@ prompt-marketing-*.md
 
 .idea/
 .tmp/
+.claude/
+.workflow/
 
 # static/ files synced at build time by scripts/sync-static.sh
 # Only images, CSS, and favicon are checked in

@@ -83,7 +83,7 @@ runs/run_20260128-194528-12345/
   prompt.md           # Exact prompt sent to the agent
   agent-stdout.txt    # Everything the agent produced
   agent-stderr.txt    # Errors and warnings
-  cwd.txt             # Working directory, command, exit code
+  run-info.txt        # Working directory, command, exit code
   run-agent.sh        # Copy of the runner for reproducibility
 ```
 

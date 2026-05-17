@@ -26,7 +26,7 @@ while true; do
       fi
       continue
     fi
-    if rg -q "EXIT_CODE=" "$run_dir/cwd.txt" 2>/dev/null; then
+    if rg -q "EXIT_CODE=" "$run_dir/run-info.txt" 2>/dev/null; then
       finished+=("$run_name:exit")
     else
       unknown+=("$run_name:unknown")

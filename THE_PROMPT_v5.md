@@ -73,18 +73,18 @@ Required steps for every agent run:
 2. Run the unified runner: ./run-agent.sh [agent] <cwd> [prompt_file] (or the equivalent in your repo).
 3. The runner creates a new run folder under <RUNS_DIR>/ with id format run_YYYYMMDD-HHMMSS-<pid>.
 4. The runner copies the prompt into <RUNS_DIR>/<run_id>/prompt.md.
-5. The runner writes <RUNS_DIR>/<run_id>/cwd.txt with the workdir and command line.
+5. The runner writes <RUNS_DIR>/<run_id>/run-info.txt with the workdir and command line.
 6. The runner writes <RUNS_DIR>/<run_id>/agent-stdout.txt and agent-stderr.txt.
 7. The runner copies itself into <RUNS_DIR>/<run_id>/run-agent.sh for traceability (or records the runner command).
 8. The runner writes <RUNS_DIR>/<run_id>/pid.txt and prints PID to stdout.
-9. The runner blocks until the agent completes, then removes pid.txt, writes EXIT_CODE=... into cwd.txt, and exits.
+9. The runner blocks until the agent completes, then removes pid.txt, writes EXIT_CODE=... into run-info.txt, and exits.
 10. If a background start produces no logs within 30s, re-run in the foreground to confirm startup and PID logging.
 
 All inputs/outputs must be persisted under the same <RUNS_DIR>/run_XXX/ folder (prompt, logs, artifacts). If your repo uses a different layout, ensure the equivalent artifacts are captured.
 
 ### Status Checks
-- Use pid.txt (while present) to verify running agents (ps -p <pid>). If shell access is restricted, read pid.txt, cwd.txt, and recent log files via MCP Steroid instead.
-- For completed runs, pid.txt is removed; use EXIT_CODE= in <RUNS_DIR>/<run_id>/cwd.txt to confirm finished status.
+- Use pid.txt (while present) to verify running agents (ps -p <pid>). If shell access is restricted, read pid.txt, run-info.txt, and recent log files via MCP Steroid instead.
+- For completed runs, pid.txt is removed; use EXIT_CODE= in <RUNS_DIR>/<run_id>/run-info.txt to confirm finished status.
 - Optional watcher: run ./watch-agents.sh to poll every 60s and log to <RUNS_DIR>/agent-watch.log.
 - Long-interval watcher: run ./monitor-agents.sh to poll every 10 minutes and log to <RUNS_DIR>/agent-watch.log.
 - If using the long-interval watcher, start it via nohup and record PID:
@@ -168,7 +168,7 @@ Each bullet below is a distinct agent stage. The root agent selects the agent ty
 ## Files and Artifacts
 - AGENTS.md (root and subsystem) governs conventions.
 - Instructions.md lists repo locations and tool paths.
-- <RUNS_DIR>/run_XXX/ contains prompt/log artifacts (prompt.md, agent-stdout.txt, agent-stderr.txt, cwd.txt; optional run.log).
+- <RUNS_DIR>/run_XXX/ contains prompt/log artifacts (prompt.md, agent-stdout.txt, agent-stderr.txt, run-info.txt; optional run.log).
 - MESSAGE-BUS.md is the main trace log; ISSUES.md is the blocker log.
 - FACTS.md (if used) records verified facts and decisions.
 - THE_PLAN.md (or THE_PLAN_v5.md) is the execution plan.

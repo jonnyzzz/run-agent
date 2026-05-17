@@ -185,7 +185,7 @@ projects/
           prompt.md             # exact prompt sent to the AI Agent
           agent-stdout.txt      # everything the AI Agent produced
           agent-stderr.txt      # errors and warnings
-          cwd.txt               # working directory, command, exit code
+          run-info.txt          # working directory, command, exit code
           run-agent.sh          # copy of the runner for reproducibility
         run_20260128-194530-12346/
           ...

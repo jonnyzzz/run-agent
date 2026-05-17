@@ -216,10 +216,10 @@ def main() -> int:
                         break
                 status = "running" if running else "finished"
             else:
-                # PID file removed on completion; infer finished from EXIT_CODE in cwd.txt
-                cwd_file = info["dir"] / "cwd.txt"
+                # PID file removed on completion; infer finished from EXIT_CODE in run-info.txt
+                info_file = info["dir"] / "run-info.txt"
                 try:
-                    text = cwd_file.read_text(encoding="utf-8", errors="replace")
+                    text = info_file.read_text(encoding="utf-8", errors="replace")
                 except FileNotFoundError:
                     text = ""
                 if "EXIT_CODE=" in text:

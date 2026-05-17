@@ -12,6 +12,8 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 RUNS_DIR="${RUNS_DIR:-$BASE_DIR/runs}"
+mkdir -p "$RUNS_DIR"
+RUNS_DIR="$(cd "$RUNS_DIR" && pwd)"
 MESSAGE_BUS="$RUNS_DIR/MESSAGE-BUS.md"
 export RUNS_DIR
 export MESSAGE_BUS
@@ -71,16 +73,19 @@ Exported to agent process:
   PROMPT              Absolute path to the copied prompt file
 
 Exit codes:
-  0  Agent completed successfully
-  1  Prompt file not found
-  2  Unknown agent type
+  0    Agent completed successfully
+  1    Prompt file not found
+  2    Unknown agent type
+  129  Terminated by SIGHUP
+  130  Terminated by SIGINT
+  143  Terminated by SIGTERM
 
 Output:
   Each run creates a directory under RUNS_DIR with:
     prompt.md          Copy of the prompt
     agent-stdout.txt   Agent stdout
     agent-stderr.txt   Agent stderr
-    cwd.txt            Run metadata (RUN_ID, CWD, AGENT, CMD, EXIT_CODE, ...)
+    run-info.txt       Run metadata (RUN_ID, CWD, AGENT, CMD, EXIT_CODE, ...)
     run-agent.sh       Copy of the runner script
     pid.txt            Agent PID (removed on completion)
 
@@ -167,45 +172,74 @@ RUN_DIR="$RUNS_DIR/$RUN_ID"
 mkdir -p "$RUN_DIR"
 cp "$BASE_DIR/run-agent.sh" "$RUN_DIR/run-agent.sh"
 
+# Compose a CMD= field that can be pasted into a shell verbatim.
+# printf %q quotes each token so spaces / shell metacharacters in $CWD
+# or $PROMPT do not corrupt the field when readers split on whitespace.
+_quoted_cmd=""
+for _arg in "${AGENT_CMD[@]}"; do
+  _quoted_cmd+="$(printf '%q' "$_arg") "
+done
+
 # Export variables available to the agent process
 PROMPT="$RUN_DIR/prompt.md"
 export RUN_ID
 export PROMPT
 
-echo "RUN_ID=$RUN_ID"
-echo "RUN_DIR=$RUN_DIR"
-
 # Standard file names
 STDOUT_FILE="$RUN_DIR/agent-stdout.txt"
 STDERR_FILE="$RUN_DIR/agent-stderr.txt"
 PID_FILE="$RUN_DIR/pid.txt"
-CWD_FILE="$RUN_DIR/cwd.txt"
+RUN_INFO_FILE="$RUN_DIR/run-info.txt"
 
 cp "$PROMPT_FILE" "$PROMPT"
 
-CMDLINE="${AGENT_CMD[*]} < \"$PROMPT\""
+CMDLINE="${_quoted_cmd}< $(printf '%q' "$PROMPT")"
+
+# Signal handler. AGENT_PID may still be empty if the trap fires before
+# the fork; the guards make that case a no-op.
+AGENT_PID=""
+on_signal() {
+  local sig="$1" code="$2"
+  if [ -n "$AGENT_PID" ]; then
+    kill -TERM "$AGENT_PID" 2>/dev/null || true
+    wait "$AGENT_PID" 2>/dev/null || true
+  fi
+  rm -f "$PID_FILE" 2>/dev/null || true
+  { printf 'EXIT_CODE=%s\nSIGNAL=%s\n' "$code" "$sig" >> "$RUN_INFO_FILE"; } || true
+  exit "$code"
+}
+trap 'on_signal INT  130' INT
+trap 'on_signal TERM 143' TERM
+trap 'on_signal HUP  129' HUP
+
 (
   cd "$CWD"
   "${AGENT_CMD[@]}" <"$PROMPT" 1>"$STDOUT_FILE" 2>"$STDERR_FILE"
 ) &
-
 AGENT_PID=$!
-echo "$AGENT_PID" > "$PID_FILE"
-echo "PID=$AGENT_PID"
 
-cat > "$CWD_FILE" <<EOF
-RUN_ID=$RUN_ID
+# run-info.txt lands before pid.txt so a watcher that uses pid.txt as
+# the "agent is up" signal can rely on run-info.txt already being
+# readable when it fires.
+RUN_INFO_BLOCK="RUN_ID=$RUN_ID
+RUN_DIR=$RUN_DIR
 CWD=$CWD
 AGENT=$AGENT
 CMD=$CMDLINE
 PROMPT=$PROMPT
 STDOUT=$STDOUT_FILE
 STDERR=$STDERR_FILE
-PID=$AGENT_PID
-EOF
+PID=$AGENT_PID"
+printf '%s\n' "$RUN_INFO_BLOCK"
+{ printf '%s\n' "$RUN_INFO_BLOCK" > "$RUN_INFO_FILE"; } || true
+echo "$AGENT_PID" > "$PID_FILE"
 
 EXIT_CODE=0
 wait "$AGENT_PID" || EXIT_CODE=$?
 rm -f "$PID_FILE"
-echo "EXIT_CODE=$EXIT_CODE" >> "$CWD_FILE"
+
+# Record EXIT_CODE on both surfaces, but never let a failed write here
+# shadow the agent's exit code (e.g. disk full, run dir removed mid-run).
+echo "EXIT_CODE=$EXIT_CODE"
+{ echo "EXIT_CODE=$EXIT_CODE" >> "$RUN_INFO_FILE"; } || true
 exit "$EXIT_CODE"
